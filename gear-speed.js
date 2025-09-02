@@ -1,0 +1,211 @@
+// Speed & Rollout mini-app — persist all fields (pinion/spur/tire/internal & checkbox)
+const $ = (id) => document.getElementById(id);
+const round = (n, p = 3) => Number.isFinite(n) ? Number(n.toFixed(p)) : 0;
+
+const spurPinionRatio = (spur, pinion) => spur / pinion;
+const finalDriveRatio = (spur, pinion, internal) => spurPinionRatio(spur, pinion) * internal;
+const rolloutMMPerMotorRev = (tireMM, fdr) => (!tireMM || !fdr) ? 0 : (Math.PI * tireMM) / fdr;
+
+// ---------- persistence ----------
+const KEYS = {
+  internalRatio   : 'fuelcalc.speedrollout.internalRatio',
+  noTransmission  : 'fuelcalc.speedrollout.noTransmission',
+  curPinion       : 'fuelcalc.speedrollout.curPinion',
+  curSpur         : 'fuelcalc.speedrollout.curSpur',
+  curTire         : 'fuelcalc.speedrollout.curTire',
+  newPinion       : 'fuelcalc.speedrollout.newPinion',
+  newSpur         : 'fuelcalc.speedrollout.newSpur',
+  newTire         : 'fuelcalc.speedrollout.newTire'
+};
+
+function safeSet(key, value) { try { localStorage.setItem(key, value); } catch (_) {} }
+function safeGet(key)       { try { return localStorage.getItem(key); } catch (_) { return null; } }
+
+// write the current value of an input to storage (as string)
+function persistInput(id, key) { const el = $(id); if (!el) return;
+  const v = el.value;
+  // Don’t persist internal if bypass is checked; keep last “real” value intact
+  if (id === 'g_internal' && $('g_no_transmission').checked) return;
+  if (v !== '' && v != null) safeSet(key, v);
+}
+
+// load from storage into an input if available
+function restoreInput(id, key) { const el = $(id); if (!el) return;
+  const v = safeGet(key);
+  if (v !== null && v !== '') el.value = v;
+}
+
+// ---- Light/Dark mode ----
+(function themeInit(){
+  const toggle = document.getElementById('darkModeToggle');
+  if (!toggle) return;
+
+  const KEYS = ['fuelcalc.theme','darkMode','theme'];  // be compatible with main app if keys differ
+  const getSaved = () => {
+    for (const k of KEYS) { const v = localStorage.getItem(k); if (v) return v; }
+    return null;
+  };
+  const save = (mode) => { try { localStorage.setItem(KEYS[0], mode); } catch {} };
+
+  const apply = (mode) => {
+    const isDark = mode === 'dark';
+    document.body.classList.toggle('dark-mode', isDark);
+    toggle.checked = isDark;
+  };
+
+  // initial: use saved → or OS preference → default light
+  const saved = getSaved();
+  const initial = saved ? saved
+                        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  apply(initial);
+
+  toggle.addEventListener('change', () => {
+    const mode = toggle.checked ? 'dark' : 'light';
+    apply(mode);
+    save(mode);
+  });
+
+  // keep in sync if OS theme changes and user hasn’t set a preference
+  if (!saved && window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+      apply(e.matches ? 'dark' : 'light');
+    });
+  }
+})();
+
+
+// ---------- UI / math ----------
+function effectiveInternalRatio() {
+  return $('g_no_transmission').checked ? 1 : (+$('g_internal').value || 0);
+}
+
+function setInternalUIState() {
+  const bypass = $('g_no_transmission').checked;
+  const input = $('g_internal');
+  const label = $('g_internal_label');
+
+  if (bypass) {
+    label.classList.add('dimmed');
+    input.disabled = true;
+    input.value = '1.0'; // display 1.0 while bypassed
+  } else {
+    label.classList.remove('dimmed');
+    input.disabled = false;
+    // restore persisted internal ratio (if any)
+    const saved = safeGet(KEYS.internalRatio);
+    if (saved && !isNaN(+saved) && +saved > 0) input.value = saved;
+  }
+}
+
+function hasValidInputs(pinion, spur, tire, internalEff) {
+  return pinion > 0 && spur > 0 && tire > 0 && internalEff > 0;
+}
+
+function show(el, flag) { el.classList.toggle('hidden', !flag); }
+function clearTexts(ids) { ids.forEach(id => $(id).textContent = ''); }
+
+function update() {
+  setInternalUIState();
+
+  // persist current values (numbers as strings)
+  persistInput('g_cur_pinion', KEYS.curPinion);
+  persistInput('g_cur_spur',   KEYS.curSpur);
+  persistInput('g_cur_tire',   KEYS.curTire);
+  persistInput('g_new_pinion', KEYS.newPinion);
+  persistInput('g_new_spur',   KEYS.newSpur);
+  persistInput('g_new_tire',   KEYS.newTire);
+  persistInput('g_internal',   KEYS.internalRatio);
+  safeSet(KEYS.noTransmission, String($('g_no_transmission').checked));
+
+  const internal = effectiveInternalRatio();
+
+  const cur = {
+    pinion: +$('g_cur_pinion').value,
+    spur:   +$('g_cur_spur').value,
+    tire:   +$('g_cur_tire').value
+  };
+  const neu = {
+    pinion: +$('g_new_pinion').value,
+    spur:   +$('g_new_spur').value,
+    tire:   +($('g_new_tire').value || cur.tire)
+  };
+
+  const validCur = hasValidInputs(cur.pinion, cur.spur, cur.tire, internal);
+  const validNew = hasValidInputs(neu.pinion, neu.spur, neu.tire, internal);
+
+  if (validCur) {
+    const curSP = spurPinionRatio(cur.spur, cur.pinion);
+    const curFDR = finalDriveRatio(cur.spur, cur.pinion, internal);
+    const curRoll = rolloutMMPerMotorRev(cur.tire, curFDR);
+    $('g_cur_sp').textContent   = round(curSP, 3);
+    $('g_cur_fdr').textContent  = round(curFDR, 3);
+    $('g_cur_roll').textContent = round(curRoll, 3);
+  } else {
+    clearTexts(['g_cur_sp','g_cur_fdr','g_cur_roll']);
+  }
+  show($('block_current'), validCur);
+
+  if (validNew) {
+    const newSP = spurPinionRatio(neu.spur, neu.pinion);
+    const newFDR = finalDriveRatio(neu.spur, neu.pinion, internal);
+    const newRoll = rolloutMMPerMotorRev(neu.tire, newFDR);
+    $('g_new_sp').textContent   = round(newSP, 3);
+    $('g_new_fdr').textContent  = round(newFDR, 3);
+    $('g_new_roll').textContent = round(newRoll, 3);
+  } else {
+    clearTexts(['g_new_sp','g_new_fdr','g_new_roll']);
+  }
+  show($('block_new'), validNew);
+
+    if (validCur && validNew) {
+      const dFDR  = (+( $('g_new_fdr').textContent ) / +( $('g_cur_fdr').textContent ) - 1) * 100;
+      const dRoll = (+( $('g_new_roll').textContent ) / +( $('g_cur_roll').textContent ) - 1) * 100;
+
+      function setDelta(el, val) {
+        el.textContent = isFinite(val) ? `${round(val,2)}%` : '—';
+        el.classList.remove('delta-positive','delta-negative','delta-neutral');
+        if (!isFinite(val)) {
+          el.classList.add('delta-neutral');
+        } else if (val > 0) {
+          el.classList.add('delta-positive');
+        } else if (val < 0) {
+          el.classList.add('delta-negative');
+        } else {
+          el.classList.add('delta-neutral');
+        }
+      }
+
+      setDelta($('g_delta_fdr'), dFDR);
+      setDelta($('g_delta_roll'), dRoll);
+      show($('block_delta'), true);
+    } else {
+      clearTexts(['g_delta_fdr','g_delta_roll']);
+      $('g_delta_fdr').className = 'delta-value delta-neutral';
+      $('g_delta_roll').className = 'delta-value delta-neutral';
+      show($('block_delta'), false);
+    }
+
+}
+
+// ---------- init ----------
+[
+  'g_cur_pinion','g_cur_spur','g_cur_tire',
+  'g_new_pinion','g_new_spur','g_new_tire',
+  'g_internal','g_no_transmission'
+].forEach(id => $(id).addEventListener('input', update));
+
+document.addEventListener('DOMContentLoaded', () => {
+  // restore all persisted values (order matters a bit for UX)
+  restoreInput('g_cur_pinion', KEYS.curPinion);
+  restoreInput('g_cur_spur',   KEYS.curSpur);
+  restoreInput('g_cur_tire',   KEYS.curTire);
+  restoreInput('g_new_pinion', KEYS.newPinion);
+  restoreInput('g_new_spur',   KEYS.newSpur);
+  restoreInput('g_new_tire',   KEYS.newTire);
+  restoreInput('g_internal',   KEYS.internalRatio);
+
+  const savedBypass = safeGet(KEYS.noTransmission);
+  if (savedBypass !== null) $('g_no_transmission').checked = savedBypass === 'true';
+
+  update();
+});
