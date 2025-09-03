@@ -179,25 +179,15 @@ function restoreInput(id, key) {
 
 // ---------- UI / math ----------
 function effectiveInternalRatio() {
+  // If bypass checked, compute with 1.0 — but keep input editable
   return $('g_no_transmission').checked ? 1 : (+$('g_internal').value || 0);
 }
 
 function setInternalUIState() {
+  // purely visual: dim the label when bypass is on, keep input enabled/editable
   const bypass = $('g_no_transmission').checked;
-  const input = $('g_internal');
   const label = $('g_internal_label');
-
-  if (bypass) {
-    label.classList.add('dimmed');
-    input.disabled = true;
-    input.value = '1.0'; // display 1.0 while bypassed
-  } else {
-    label.classList.remove('dimmed');
-    input.disabled = false;
-    // restore persisted internal ratio (if any)
-    const saved = safeGet(KEYS.internalRatio);
-    if (saved && !isNaN(+saved) && +saved > 0) input.value = saved;
-  }
+  label.classList.toggle('dimmed', !!bypass);
 }
 
 function hasValidInputs(pinion, spur, tire, internalEff) {
@@ -351,7 +341,7 @@ function renderPinionRows() {
   const ctx = pp.state.context === 'cur' ? 'cur' : 'new';
 
   const spur = +document.getElementById(`g_${ctx}_spur`).value;
-  // FIX: single shared Internal Ratio field
+  // Use single shared Internal Ratio field
   const internal = effectiveInternalRatio();
   // prefer “new” tire if present when context is new; else fall back to current
   const tire = +(document.getElementById(`g_${ctx}_tire`).value ||
@@ -385,10 +375,9 @@ function renderPinionRows() {
 
   // click-to-select
   Array.from(pp.el.rows.querySelectorAll('.pp-row')).forEach(tr => {
-    tr.addEventListener('click', e => {
+    tr.addEventListener('click', () => {
       const chosen = +tr.getAttribute('data-pinion');
       document.getElementById(`g_${ctx}_pinion`).value = chosen;
-      // reflect selection & recompute main results
       update();
       closePinionPicker();
     });
@@ -398,12 +387,12 @@ function renderPinionRows() {
 // open from either input
 Array.from(document.querySelectorAll('.pinion-picker')).forEach(input => {
   // visually still looks like an input; treat as button
-  input.addEventListener('click', e => {
+  input.addEventListener('click', () => {
     const ctx = input.getAttribute('data-context'); // 'cur' or 'new'
     openPinionPicker(ctx);
   });
   // prevent keyboard from showing on mobile
-  input.addEventListener('focus', e => { input.blur(); });
+  input.addEventListener('focus', () => { input.blur(); });
 });
 
 // close actions
