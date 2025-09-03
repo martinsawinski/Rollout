@@ -73,6 +73,105 @@ function restoreInput(id, key) { const el = $(id); if (!el) return;
   }
 })();
 
+/* === Flyout menu with focus trap === */
+(function flyoutInit(){
+  const openBtn   = $('flyoutOpen');
+  const closeBtn  = $('flyoutClose');
+  const panel     = $('flyoutPanel');
+  const overlay   = $('flyoutOverlay');
+  const versionEl = $('flyoutVersion');
+
+  if (!openBtn || !panel || !overlay) return;
+
+  // optional: mirror app version into panel footer
+  try {
+    const mainVer = $('appVersion')?.textContent?.trim();
+    if (mainVer && versionEl) versionEl.textContent = mainVer;
+  } catch {}
+
+  let prevFocus = null;
+
+  // return all focusable elements inside the panel (live each time)
+  const getFocusables = () => {
+    const list = panel.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    return Array.from(list).filter(el => el.offsetParent !== null);
+  };
+
+  function openFlyout(){
+    prevFocus = document.activeElement;
+    panel.classList.add('open');
+    overlay.hidden = false;
+    requestAnimationFrame(()=> overlay.classList.add('show'));
+
+    openBtn.setAttribute('aria-expanded', 'true');
+    panel.setAttribute('aria-hidden', 'false');
+
+    // focus first focusable or close button/panel
+    const f = getFocusables()[0] || closeBtn || panel;
+    f.focus();
+
+    overlay.addEventListener('click', closeFlyout, { once: true });
+    document.addEventListener('keydown', onKeydown);
+    panel.addEventListener('keydown', trapTab);
+    // close on link click inside the panel
+    panel.addEventListener('click', onLinkClick);
+  }
+
+  function closeFlyout(){
+    panel.classList.remove('open');
+    overlay.classList.remove('show');
+    openBtn.setAttribute('aria-expanded', 'false');
+    panel.setAttribute('aria-hidden', 'true');
+
+    setTimeout(()=> overlay.hidden = true, 200);
+
+    document.removeEventListener('keydown', onKeydown);
+    panel.removeEventListener('keydown', trapTab);
+    panel.removeEventListener('click', onLinkClick);
+
+    // restore focus
+    (prevFocus || openBtn).focus();
+  }
+
+  function onKeydown(e){
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeFlyout();
+    }
+  }
+
+  // Keep tab focus inside panel when open
+  function trapTab(e){
+    if (e.key !== 'Tab') return;
+    const focusables = getFocusables();
+    if (!focusables.length) return;
+
+    const first = focusables[0];
+    const last  = focusables[focusables.length - 1];
+
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  function onLinkClick(e){
+    const link = e.target.closest('a.menu-link');
+    if (!link) return;
+    // close panel; navigation will proceed
+    panel.classList.remove('open');
+    overlay.classList.remove('show');
+    setTimeout(()=> overlay.hidden = true, 200);
+  }
+
+  openBtn.addEventListener('click', openFlyout);
+  closeBtn?.addEventListener('click', closeFlyout);
+})();
 
 // ---------- UI / math ----------
 function effectiveInternalRatio() {
@@ -157,34 +256,33 @@ function update() {
   }
   show($('block_new'), validNew);
 
-    if (validCur && validNew) {
-      const dFDR  = (+( $('g_new_fdr').textContent ) / +( $('g_cur_fdr').textContent ) - 1) * 100;
-      const dRoll = (+( $('g_new_roll').textContent ) / +( $('g_cur_roll').textContent ) - 1) * 100;
+  if (validCur && validNew) {
+    const dFDR  = (+( $('g_new_fdr').textContent ) / +( $('g_cur_fdr').textContent ) - 1) * 100;
+    const dRoll = (+( $('g_new_roll').textContent ) / +( $('g_cur_roll').textContent ) - 1) * 100;
 
-      function setDelta(el, val) {
-        el.textContent = isFinite(val) ? `${round(val,2)}%` : '—';
-        el.classList.remove('delta-positive','delta-negative','delta-neutral');
-        if (!isFinite(val)) {
-          el.classList.add('delta-neutral');
-        } else if (val > 0) {
-          el.classList.add('delta-positive');
-        } else if (val < 0) {
-          el.classList.add('delta-negative');
-        } else {
-          el.classList.add('delta-neutral');
-        }
+    function setDelta(el, val) {
+      el.textContent = isFinite(val) ? `${round(val,2)}%` : '—';
+      el.classList.remove('delta-positive','delta-negative','delta-neutral');
+      if (!isFinite(val)) {
+        el.classList.add('delta-neutral');
+      } else if (val > 0) {
+        el.classList.add('delta-positive');
+      } else if (val < 0) {
+        el.classList.add('delta-negative');
+      } else {
+        el.classList.add('delta-neutral');
       }
-
-      setDelta($('g_delta_fdr'), dFDR);
-      setDelta($('g_delta_roll'), dRoll);
-      show($('block_delta'), true);
-    } else {
-      clearTexts(['g_delta_fdr','g_delta_roll']);
-      $('g_delta_fdr').className = 'delta-value delta-neutral';
-      $('g_delta_roll').className = 'delta-value delta-neutral';
-      show($('block_delta'), false);
     }
 
+    setDelta($('g_delta_fdr'), dFDR);
+    setDelta($('g_delta_roll'), dRoll);
+    show($('block_delta'), true);
+  } else {
+    clearTexts(['g_delta_fdr','g_delta_roll']);
+    $('g_delta_fdr').className = 'delta-value delta-neutral';
+    $('g_delta_roll').className = 'delta-value delta-neutral';
+    show($('block_delta'), false);
+  }
 }
 
 // ---------- init ----------

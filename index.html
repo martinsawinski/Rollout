@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="../style.css" />
+  <link rel="stylesheet" href="../mileage/style.css" />
 
   <!-- Small structural helpers only (no new colors/typography) -->
   <style>
@@ -49,10 +49,35 @@
       
     </style>
   </head>
-  <body>
-      <div class="header">
-        <img src="../icons/Yeti-RC-FuelCalc-Logo.png" alt="Logo" class="logo" />
-      </div>
+<body>
+  <!-- Flyout overlay + panel -->
+  <div id="flyoutOverlay" class="flyout-overlay" hidden></div>
+  <nav id="flyoutPanel" class="flyout-panel" aria-hidden="true" aria-label="FuelCalc menu">
+    <div class="flyout-header">
+      <span>Yeti RC Tools</span>
+      <button id="flyoutClose" class="icon-btn" aria-label="Close menu">✕</button>
+    </div>
+    <div class="flyout-links">
+      <a class="menu-link" href="#">🏠 Home</a>
+      <a class="menu-link" href="../mileage/index.html">⛽ Fuel Calculator </a>
+      <a class="menu-link" href="../gearing/index.html" aria-current="page">⚙️ Gearing & Rollout</a>
+    <div class="flyout-footer">
+      <small>v<span id="flyoutVersion">—</span></small>
+    </div>
+  </nav>
+
+  <div class="header">
+    <img src="../mileage/icons/Yeti-RC-FuelCalc-Logo.png" alt="Logo" class="logo" />
+    <!-- Hamburger button (right side) -->
+    <button id="flyoutOpen"
+            class="icon-btn"
+            aria-label="Open menu"
+            aria-controls="flyoutPanel"
+            aria-expanded="false"
+            style="position:absolute; right:16px; top:18px; background:none; border:none; font-size:24px; cursor:pointer;">
+      ☰
+    </button>
+  </div>
     <div class="container">
     <h2>Speed & Rollout</h2>
       <div class="grid-2">
