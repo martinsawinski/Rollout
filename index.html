@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Yeti RC · Speed & Rollout</title>
 
-  <!-- Reuse FuelCalc styling & assets -->
+  <!-- App assets -->
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="stylesheet" href="../mileage/style.css" />
 
-  <!-- Inline page-specific styles for the mini app & overlays -->
+  <!-- Page-specific styles -->
   <style>
     .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .span-2 { grid-column: 1 / -1; }
@@ -26,18 +26,18 @@
       transition: background-color 0.3s;
     }
     body.dark-mode .result-box { background:#303841; }
-    .checkbox-row { display:flex; align-items:center; gap:8px; margin:-10px 0px 30px; }
+    .checkbox-row { display:flex; align-items:center; gap:8px; margin:-10px 0 30px; }
     input[type="checkbox"] { inline-size: 18px; block-size: 18px; }
     .dimmed { opacity:.5; }
     .hidden { display:none; }
 
-    .delta-block { display: flex; flex-direction: column; align-items: center; text-align: center; }
-    .delta-value { font-size: 1.4rem; font-weight: bold; margin-top: 6px; }
-    .delta-positive { color: #2e7d32; }  /* green */
-    .delta-negative { color: #c62828; }  /* red */
-    .delta-neutral  { color: #666; }     /* gray */
+    .delta-block { display:flex; flex-direction:column; align-items:center; text-align:center; }
+    .delta-value { font-size:1.4rem; font-weight:bold; margin-top:6px; }
+    .delta-positive { color:#2e7d32; }
+    .delta-negative { color:#c62828; }
+    .delta-neutral  { color:#666; }
 
-    /* ===== Overlay shells (shared) ===== */
+    /* ===== Overlays (shared) ===== */
     #pinionOverlay, #spurOverlay { position:fixed; inset:0; display:none; z-index:9999; }
     #pinionOverlay[aria-hidden="false"], #spurOverlay[aria-hidden="false"] { display:block; }
     #pinionOverlay .pp-backdrop, #spurOverlay .pp-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.5); }
@@ -46,33 +46,16 @@
       background:#1a1f25; border-radius:16px; box-shadow:0 8px 40px rgba(0,0,0,.45);
       display:flex; flex-direction:column; max-height:88%;
     }
-    @media (min-width: 500px) {
-      #pinionOverlay .pp-sheet, #spurOverlay .pp-sheet { inset:8% 20% auto 20%; }
-    }
-    .pp-header {
-      display:flex; align-items:center; justify-content:space-between;
-      padding:12px 12px 6px; border-bottom:1px solid #2a2a2a;
-    }
+    @media (min-width:500px){ #pinionOverlay .pp-sheet, #spurOverlay .pp-sheet { inset:8% 20% auto 20%; } }
+    .pp-header { display:flex; align-items:center; justify-content:space-between; padding:12px 12px 6px; border-bottom:1px solid #2a2a2a; }
     .pp-header h2 { margin:0; font-size:1.2rem; }
-    #ppBack, #spBack {
-      background:transparent; border:0; color:#cfe6df; font-size:1.2rem; padding:6px 8px; cursor:pointer;
-    }
-    .pp-table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; }
-    .pp-table { width:100%; border-collapse:collapse; }
-    .pp-table thead th {
-      text-align:center; font-size:.8rem; opacity:.8; padding:10px 14px; border-bottom:1px solid #2a2a2a;
-    }
-    .pp-table td { padding:14px; border-bottom:1px solid #222a30; text-align:center; }
-    .pp-row { cursor:pointer; border-radius:12px; }
-    .pp-row.selected { background:#2d4a45; }
-    .pp-table td:nth-child(2), .pp-table td:nth-child(3), .pp-table td:nth-child(4) {
-      text-align:center; font-variant-numeric:tabular-nums;
-    }
+    #ppBack, #spBack { background:transparent; border:0; color:#cfe6df; font-size:1.2rem; padding:6px 8px; cursor:pointer; }
 
-    /* ===== Sticky header + vertical centering (applies to both overlays) ===== */
-    #pinionOverlay .pp-table-wrap, #spurOverlay .pp-table-wrap {
-      overflow:auto; -webkit-overflow-scrolling:touch; max-height:65vh;
-    }
+    .pp-table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; max-height:65vh; }
+    .pp-table { width:100%; border-collapse:collapse; }
+    .pp-table thead th { text-align:center; font-size:.8rem; opacity:.8; padding:10px 14px; border-bottom:1px solid #2a2a2a; }
+
+    /* Sticky header + vertical centering */
     #pinionOverlay .pp-table thead th, #spurOverlay .pp-table thead th {
       position:sticky; top:0; z-index:2;
       background:#1a1f25; border-bottom:1px solid #2a2a2a;
@@ -80,10 +63,15 @@
     }
     #pinionOverlay .pp-table td, #spurOverlay .pp-table td { vertical-align:middle; }
 
-    /* Light mode tint for sticky header (optional) */
+    .pp-table td { padding:14px; border-bottom:1px solid #222a30; text-align:center; }
+    .pp-row { cursor:pointer; border-radius:12px; }
+    .pp-row.selected { background:#2d4a45; }
+    .pp-table td:nth-child(2), .pp-table td:nth-child(3), .pp-table td:nth-child(4) { text-align:center; font-variant-numeric:tabular-nums; }
+
+    /* Light mode sticky header tint */
     body:not(.dark-mode) #pinionOverlay .pp-table thead th,
     body:not(.dark-mode) #spurOverlay   .pp-table thead th {
-      background:#fff; border-bottom-color:#ddd; box-shadow:0 1px 0 rgba(0,0,0,0.06);
+      background:#fff; border-bottom-color:#ddd; box-shadow:0 1px 0 rgba(0,0,0,.06);
     }
   </style>
 </head>
@@ -97,7 +85,7 @@
     </div>
     <div class="flyout-links">
       <a class="menu-link" href="#">🏠 Home</a>
-      <a class="menu-link" href="../mileage/index.html">⛽ Fuel Calculator </a>
+      <a class="menu-link" href="../mileage/index.html">⛽ Fuel Calculator</a>
       <a class="menu-link" href="../gearing/index.html" aria-current="page">⚙️ Gearing & Rollout</a>
     </div>
     <div class="flyout-footer">
@@ -107,15 +95,8 @@
 
   <div class="header">
     <img src="../mileage/icons/Yeti-RC-FuelCalc-Logo.png" alt="Logo" class="logo" />
-    <!-- Hamburger button (right side) -->
-    <button id="flyoutOpen"
-            class="icon-btn"
-            aria-label="Open menu"
-            aria-controls="flyoutPanel"
-            aria-expanded="false"
-            style="position:absolute; right:16px; top:18px; background:none; border:none; font-size:24px; cursor:pointer;">
-      ☰
-    </button>
+    <button id="flyoutOpen" class="icon-btn" aria-label="Open menu" aria-controls="flyoutPanel" aria-expanded="false"
+            style="position:absolute; right:16px; top:18px; background:none; border:none; font-size:24px; cursor:pointer;">☰</button>
   </div>
 
   <div class="container">
@@ -146,7 +127,6 @@
         </label>
       </div>
 
-      <!-- Centered Internal Ratio -->
       <div class="span-2 center-field">
         <div class="field-wrap">
           <label id="g_internal_label">Internal Ratio
@@ -229,16 +209,10 @@
           <h2 id="ppTitle">Choose Pinion</h2>
           <div style="width:40px"></div>
         </header>
-
         <div class="pp-table-wrap">
           <table class="pp-table" aria-describedby="ppTitle">
             <thead>
-              <tr>
-                <th>PINION</th>
-                <th>RATIO</th>
-                <th>FDR</th>
-                <th>ROLLOUT</th>
-              </tr>
+              <tr><th>PINION</th><th>RATIO</th><th>FDR</th><th>ROLLOUT</th></tr>
             </thead>
             <tbody id="ppRows"><!-- rows injected --></tbody>
           </table>
