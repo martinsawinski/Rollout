@@ -307,3 +307,110 @@ document.addEventListener('DOMContentLoaded', () => {
 
   update();
 });
+
+/* ---------------- Pinion Picker ---------------- */
+
+const pp = {
+  el: {
+    root: document.getElementById('pinionOverlay'),
+    rows: document.getElementById('ppRows'),
+    back: document.getElementById('ppBack'),
+    title: document.getElementById('ppTitle'),
+  },
+  state: {
+    context: 'cur',   // 'cur' or 'new' – which input launched the picker
+    pinionMin: 5,
+    pinionMax: 70
+  }
+};
+
+// open the overlay
+function openPinionPicker(context) {
+  pp.state.context = context;
+  pp.el.title.textContent = 'Choose Pinion';
+  renderPinionRows();
+  pp.el.root.setAttribute('aria-hidden', 'false');
+}
+
+// close the overlay
+function closePinionPicker() {
+  pp.el.root.setAttribute('aria-hidden', 'true');
+}
+
+// compute rollout units (we’ll show cm by default for a tidy number)
+function rolloutCMPerMotorRev(tireMM, fdr) {
+  if (!tireMM || !fdr) return null;
+  return (Math.PI * tireMM) / fdr / 10; // cm
+}
+
+function renderPinionRows() {
+  const ctx = pp.state.context === 'cur' ? 'cur' : 'new';
+
+  const spur = +document.getElementById(`g_${ctx}_spur`).value;
+  const internal = +document.getElementById(`g_${ctx}_internal`).value;
+  // prefer “new” tire if present when context is new; else fall back to current
+  const tire = +(document.getElementById(`g_${ctx}_tire`).value ||
+                 document.getElementById('g_cur_tire').value);
+
+  const selectedPinion = +document.getElementById(`g_${ctx}_pinion`).value;
+
+  const rows = [];
+  for (let pin = pp.state.pinionMin; pin <= pp.state.pinionMax; pin++) {
+    const ratio = spur / pin;
+    const fdr = ratio * internal;
+    const rollCm = rolloutCMPerMotorRev(tire, fdr); // may be null if tire not set
+
+    rows.push({
+      pinion: pin,
+      ratio: isFinite(ratio) ? ratio : 0,
+      fdr: isFinite(fdr) ? fdr : 0,
+      rollout: rollCm
+    });
+  }
+
+  pp.el.rows.innerHTML = rows.map(r => `
+    <tr class="pp-row ${r.pinion === selectedPinion ? 'selected' : ''}"
+        data-pinion="${r.pinion}">
+      <td><b>${r.pinion}</b></td>
+      <td>${round(r.ratio, 2)}</td>
+      <td>${round(r.fdr, 2)}</td>
+      <td>${r.rollout == null ? '—' : round(r.rollout, 2)}</td>
+    </tr>
+  `).join('');
+
+  // click-to-select
+  Array.from(pp.el.rows.querySelectorAll('.pp-row')).forEach(tr => {
+    tr.addEventListener('click', e => {
+      const chosen = +tr.getAttribute('data-pinion');
+      document.getElementById(`g_${ctx}_pinion`).value = chosen;
+      // reflect selection & recompute main results
+      update();
+      closePinionPicker();
+    });
+  });
+}
+
+// open from either input
+Array.from(document.querySelectorAll('.pinion-picker')).forEach(input => {
+  // visually still looks like an input; treat as button
+  input.addEventListener('click', e => {
+    const ctx = input.getAttribute('data-context'); // 'cur' or 'new'
+    openPinionPicker(ctx);
+  });
+  // prevent keyboard from showing on mobile
+  input.addEventListener('focus', e => { input.blur(); });
+});
+
+// close actions
+pp.el.back.addEventListener('click', closePinionPicker);
+pp.el.root.querySelector('.pp-backdrop').addEventListener('click', closePinionPicker);
+
+// re-render list if upstream numbers change (spur/internal/tire)
+['g_cur_spur','g_cur_internal','g_cur_tire',
+ 'g_new_spur','g_new_internal','g_new_tire'
+].forEach(id=>{
+  const n = document.getElementById(id);
+  if (n) n.addEventListener('input', () => {
+    if (pp.el.root.getAttribute('aria-hidden') === 'false') renderPinionRows();
+  });
+});

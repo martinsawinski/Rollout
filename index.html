@@ -83,9 +83,10 @@
       <div class="grid-2">
         <div>
           <h3>Current</h3>
-          <label>Pinion
-            <input id="g_cur_pinion" type="number" min="1" step="1" placeholder="e.g., 20">
-          </label>
+          <<label>Pinion
+              <input id="g_new_pinion" type="number" min="5" value="20"
+                     class="pinion-picker" data-context="new" readonly />
+            </label>
           <label>Spur
             <input id="g_cur_spur" type="number" min="1" step="1" placeholder="e.g., 48">
           </label>
@@ -94,7 +95,8 @@
         <div>
           <h3>New</h3>
           <label>Pinion
-            <input id="g_new_pinion" type="number" min="1" step="1" placeholder="e.g., 20">
+            <input id="g_new_pinion" type="number" min="5" value="20"
+                   class="pinion-picker" data-context="new" readonly />
           </label>
           <label>Spur
             <input id="g_new_spur" type="number" min="1" step="1" placeholder="e.g., 48">
@@ -174,6 +176,32 @@
       <footer class="app-footer">
         App Version — <span id="appVersion"></span>
       </footer>
+
+      <!-- Pinion Picker Overlay -->
+      <div id="pinionOverlay" aria-hidden="true">
+        <div class="pp-backdrop"></div>
+        <div class="pp-sheet" role="dialog" aria-modal="true" aria-labelledby="ppTitle">
+          <header class="pp-header">
+            <button id="ppBack" aria-label="Close">←</button>
+            <h2 id="ppTitle">Choose Pinion</h2>
+            <div style="width:40px"></div>
+          </header>
+
+          <div class="pp-table-wrap">
+            <table class="pp-table" aria-describedby="ppTitle">
+              <thead>
+                <tr>
+                  <th>PINION</th>
+                  <th>RATIO</th>
+                  <th>FDR</th>
+                  <th>ROLLOUT</th>
+                </tr>
+              </thead>
+              <tbody id="ppRows"><!-- rows injected --></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
     <script src="gear-speed.js"></script>
   </body>
