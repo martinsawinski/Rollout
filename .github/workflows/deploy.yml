@@ -19,7 +19,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           sftp_only: true
           local_path: ./
-          remote_path: /home/sawi0011/mileage.yetirc.com/dev/gearing/  # your DreamHost web directory
+          remote_path: /home/sawi0011/dev.yetirc.com/gearing/  # your DreamHost web directory
           # Wipe the remote folder before upload (optional):
           delete_remote_files: false
           
