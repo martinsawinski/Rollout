@@ -46,7 +46,40 @@
       .delta-positive { color: #2e7d32; }  /* green */
       .delta-negative { color: #c62828; }  /* red */
       .delta-neutral  { color: #666; }     /* gray */
-      
+
+    /* Overlay shell */
+#pinionOverlay { position:fixed; inset:0; display:none; z-index:9999; }
+#pinionOverlay[aria-hidden="false"] { display:block; }
+#pinionOverlay .pp-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.5); }
+#pinionOverlay .pp-sheet {
+  position:absolute; inset:6% 2% auto 2%;
+  background:#1a1f25; border-radius:16px; box-shadow:0 8px 40px rgba(0,0,0,.45);
+  display:flex; flex-direction:column; max-height:88%;
+}
+@media (min-width: 720px) {
+  #pinionOverlay .pp-sheet { inset:8% 20% auto 20%; }
+}
+.pp-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 12px 6px;
+  border-bottom:1px solid #2a2a2a;
+}
+.pp-header h2 { margin:0; font-size:1.2rem; }
+#ppBack {
+  background:transparent; border:0; color:#cfe6df; font-size:1.2rem; padding:6px 8px; cursor:pointer;
+}
+.pp-table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; }
+.pp-table { width:100%; border-collapse:collapse; }
+.pp-table thead th {
+  text-align:left; font-size:.8rem; opacity:.8; padding:10px 14px; border-bottom:1px solid #2a2a2a;
+}
+.pp-table td { padding:14px; border-bottom:1px solid #222a30; text-align:left; }
+.pp-row { cursor:pointer; border-radius:12px; }
+.pp-row.selected { background:#2d4a45; }
+.pp-table td:nth-child(2), .pp-table td:nth-child(3), .pp-table td:nth-child(4) {
+  text-align:right; font-variant-numeric:tabular-nums;
+}
+
     </style>
   </head>
 <body>
