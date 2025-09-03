@@ -1,0 +1,27 @@
+name: Deploy to DreamHost (SFTP)
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upload via SFTP (password)
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          port: 22
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          sftp_only: true
+          local_path: ./
+          remote_path: /home/sawi0011/mileage.yetirc.com/dev/gearing/  # your DreamHost web directory
+          # Wipe the remote folder before upload (optional):
+          delete_remote_files: false
+          
+          # Exclusions (use rsync-style args in a single string):
+          rsyncArgs: "--exclude='.git' --exclude='.github' --exclude='.DS_Store'"
