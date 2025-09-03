@@ -101,6 +101,19 @@
       .pp-table td:nth-child(2), .pp-table td:nth-child(3), .pp-table td:nth-child(4) {
         text-align:center; font-variant-numeric:tabular-nums;
       }
+    /* shared wrappers */
+#pinionOverlay .pp-table-wrap,
+#spurOverlay   .pp-table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; max-height:65vh; }
+
+/* sticky header + vertical centering */
+#pinionOverlay .pp-table thead th,
+#spurOverlay   .pp-table thead th {
+  position:sticky; top:0; z-index:2;
+  background:#1a1f25; border-bottom:1px solid #2a2a2a;
+  vertical-align:middle; box-shadow:0 1px 0 rgba(0,0,0,.25);
+}
+#pinionOverlay .pp-table td,
+#spurOverlay   .pp-table td { vertical-align:middle; }
     </style>
   </head>
 <body>
@@ -142,7 +155,8 @@
                    class="pinion-picker" data-context="cur" readonly />
           </label>
           <label>Spur
-            <input id="g_cur_spur" type="number" min="1" step="1" placeholder="e.g., 48">
+            <input id="g_cur_spur" type="number" value="48"
+                   class="spur-picker" data-context="cur" readonly/>
           </label>
         </div>
 
@@ -153,7 +167,8 @@
                    class="pinion-picker" data-context="new" readonly />
           </label>
           <label>Spur
-            <input id="g_new_spur" type="number" min="1" step="1" placeholder="e.g., 48">
+            <input id="g_new_spur" type="number" value="48"
+                   class="spur-picker" data-context="new" readonly/>
           </label>
         </div>
 
@@ -174,12 +189,12 @@
       <div class="grid-2">
         <div>
           <label>Tire Diameter (mm)
-            <input id="g_cur_tire" type="number" step="0.1" placeholder="e.g., 109">
+            <input id="g_cur_tire" type="number" step="0.1" placeholder="e.g., 22">
           </label>
         </div>
         <div>
           <label>Tire Diameter (mm)
-            <input id="g_new_tire" type="number" step="0.1" placeholder="e.g., 109">
+            <input id="g_new_tire" type="number" step="0.1" placeholder="e.g., 24">
           </label>
         </div>
       </div>
@@ -256,6 +271,26 @@
           </div>
         </div>
       </div>
+
+      <!-- Spur Picker Overlay -->
+      <div id="spurOverlay" aria-hidden="true">
+        <div class="pp-backdrop"></div>
+          <div class="pp-sheet" role="dialog" aria-modal="true" aria-labelledby="spTitle">
+            <header class="pp-header">
+              <button id="spBack" aria-label="Close">←</button>
+              <h2 id="spTitle">Choose Spur</h2>
+              <div style="width:40px"></div>
+            </header>
+            <div class="pp-table-wrap">
+              <table class="pp-table" aria-describedby="spTitle">
+                <thead>
+                  <tr><th>SPUR</th><th>RATIO</th><th>FDR</th><th>ROLLOUT</th></tr>
+                </thead>
+                <tbody id="spRows"><!-- rows injected --></tbody>
+                </table>
+            </div>
+          </div>
+        </div>
 
     <script src="gear-speed.js"></script>
   </body>
