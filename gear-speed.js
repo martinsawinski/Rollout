@@ -22,7 +22,9 @@ function safeSet(key, value) { try { localStorage.setItem(key, value); } catch (
 function safeGet(key)       { try { return localStorage.getItem(key); } catch (_) { return null; } }
 
 // write the current value of an input to storage (as string)
-function persistInput(id, key) { const el = $(id); if (!el) return;
+function persistInput(id, key) {
+  const el = $(id);
+  if (!el) return;
   const v = el.value;
   // Don’t persist internal if bypass is checked; keep last “real” value intact
   if (id === 'g_internal' && $('g_no_transmission').checked) return;
@@ -30,7 +32,9 @@ function persistInput(id, key) { const el = $(id); if (!el) return;
 }
 
 // load from storage into an input if available
-function restoreInput(id, key) { const el = $(id); if (!el) return;
+function restoreInput(id, key) {
+  const el = $(id);
+  if (!el) return;
   const v = safeGet(key);
   if (v !== null && v !== '') el.value = v;
 }
@@ -347,7 +351,8 @@ function renderPinionRows() {
   const ctx = pp.state.context === 'cur' ? 'cur' : 'new';
 
   const spur = +document.getElementById(`g_${ctx}_spur`).value;
-  const internal = +document.getElementById(`g_${ctx}_internal`).value;
+  // FIX: single shared Internal Ratio field
+  const internal = effectiveInternalRatio();
   // prefer “new” tire if present when context is new; else fall back to current
   const tire = +(document.getElementById(`g_${ctx}_tire`).value ||
                  document.getElementById('g_cur_tire').value);
@@ -406,11 +411,10 @@ pp.el.back.addEventListener('click', closePinionPicker);
 pp.el.root.querySelector('.pp-backdrop').addEventListener('click', closePinionPicker);
 
 // re-render list if upstream numbers change (spur/internal/tire)
-['g_cur_spur','g_cur_internal','g_cur_tire',
- 'g_new_spur','g_new_internal','g_new_tire'
-].forEach(id=>{
-  const n = document.getElementById(id);
-  if (n) n.addEventListener('input', () => {
-    if (pp.el.root.getAttribute('aria-hidden') === 'false') renderPinionRows();
+['g_cur_spur','g_internal','g_cur_tire','g_new_spur','g_new_tire']
+  .forEach(id=>{
+    const n = document.getElementById(id);
+    if (n) n.addEventListener('input', () => {
+      if (pp.el.root.getAttribute('aria-hidden') === 'false') renderPinionRows();
+    });
   });
-});
