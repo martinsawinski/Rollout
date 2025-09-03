@@ -10,112 +10,83 @@
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="stylesheet" href="../mileage/style.css" />
+
+  <!-- Inline page-specific styles for the mini app & overlays -->
   <style>
-      .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-      .span-2 { grid-column: 1 / -1; }
-      .center-field { display:flex; flex-direction:column; align-items:center; }
-      .center-field .field-wrap { width: 100%; max-width: 300px; }
-      .kv { display:flex; justify-content:space-between; gap:12px; margin:8px 0; }
-      .result-box {
-        margin: 20px 0 30px; padding: 20px 20px 30px;
-        background: #eef3fa; border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        font-weight: 500; line-height: 1.5; font-size: 1rem;
-        transition: background-color 0.3s;
-      }
-      body.dark-mode .result-box { background:#303841; }
-      .checkbox-row { display:flex; align-items:center; gap:8px; margin:-10px 0px 30px; }
-      input[type="checkbox"] { inline-size: 18px; block-size: 18px; }
-      .dimmed { opacity:.5; }
-      .hidden { display:none; }
-      
-      .delta-block {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-      }
-      .delta-value {
-        font-size: 1.4rem;
-        font-weight: bold;
-        margin-top: 6px;
-      }
-      
-      .delta-positive { color: #2e7d32; }  /* green */
-      .delta-negative { color: #c62828; }  /* red */
-      .delta-neutral  { color: #666; }     /* gray */
-      
-      /* Overlay shell */
-      #pinionOverlay { position:fixed; inset:0; display:none; z-index:9999; }
-      #pinionOverlay[aria-hidden="false"] { display:block; }
-      #pinionOverlay .pp-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.5); }
-      #pinionOverlay .pp-sheet {
-        position:absolute; inset:6% 2% auto 2%;
-        background:#1a1f25; border-radius:16px; box-shadow:0 8px 40px rgba(0,0,0,.45);
-        display:flex; flex-direction:column; max-height:88%;
-      }
-      /* Make the pinion table header sticky */
-      #pinionOverlay .pp-table-wrap {
-      overflow: auto;
-      -webkit-overflow-scrolling: touch;
-      max-height: 65vh;              /* ensure vertical space so sticky can engage */
-      }
+    .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .span-2 { grid-column: 1 / -1; }
+    .center-field { display:flex; flex-direction:column; align-items:center; }
+    .center-field .field-wrap { width: 100%; max-width: 300px; }
+    .kv { display:flex; justify-content:space-between; gap:12px; margin:8px 0; }
+    .result-box {
+      margin: 20px 0 30px; padding: 20px 20px 30px;
+      background: #eef3fa; border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      font-weight: 500; line-height: 1.5; font-size: 1rem;
+      transition: background-color 0.3s;
+    }
+    body.dark-mode .result-box { background:#303841; }
+    .checkbox-row { display:flex; align-items:center; gap:8px; margin:-10px 0px 30px; }
+    input[type="checkbox"] { inline-size: 18px; block-size: 18px; }
+    .dimmed { opacity:.5; }
+    .hidden { display:none; }
 
-      /* Sticky header cells */
-      #pinionOverlay .pp-table thead th {
-      position: sticky;
-      top: 0;
-      z-index: 2;                     /* keep above rows */
-      background: #666;            /* match your dark sheet background */
-      border-bottom: 1px solid #2a2a2a;
-      /* optional: subtle separation */
-      box-shadow: 0 1px 0 rgba(0,0,0,0.25);
-      }
+    .delta-block { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .delta-value { font-size: 1.4rem; font-weight: bold; margin-top: 6px; }
+    .delta-positive { color: #2e7d32; }  /* green */
+    .delta-negative { color: #c62828; }  /* red */
+    .delta-neutral  { color: #666; }     /* gray */
 
-      /* Light mode fallback (if you ever show the overlay on a light sheet) */
-      body:not(.dark-mode) #pinionOverlay .pp-table thead th {
-      background: #fff;
-      border-bottom-color: #ddd;
-      box-shadow: 0 1px 0 rgba(0,0,0,0.06);
-      }
-      @media (min-width: 500px) {
-        #pinionOverlay .pp-sheet { inset:8% 20% auto 20%; }
-      }
-      .pp-header {
-        display:flex; align-items:center; justify-content:space-between;
-        padding:12px 12px 6px;
-        border-bottom:1px solid #2a2a2a;
-      }
-      .pp-header h2 { margin:0; font-size:1.2rem; }
-      #ppBack {
-        background:transparent; border:0; color:#cfe6df; font-size:1.2rem; padding:6px 8px; cursor:pointer;
-      }
-      .pp-table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; }
-      .pp-table { width:100%; border-collapse:collapse; }
-      .pp-table thead th {
-        text-align:center; font-size:.8rem; opacity:.8; padding:10px 14px; border-bottom:1px solid #2a2a2a;
-      }
-      .pp-table td { padding:14px; border-bottom:1px solid #222a30; text-align:center; }
-      .pp-row { cursor:pointer; border-radius:12px; }
-      .pp-row.selected { background:#2d4a45; }
-      .pp-table td:nth-child(2), .pp-table td:nth-child(3), .pp-table td:nth-child(4) {
-        text-align:center; font-variant-numeric:tabular-nums;
-      }
-    /* shared wrappers */
-#pinionOverlay .pp-table-wrap,
-#spurOverlay   .pp-table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; max-height:65vh; }
+    /* ===== Overlay shells (shared) ===== */
+    #pinionOverlay, #spurOverlay { position:fixed; inset:0; display:none; z-index:9999; }
+    #pinionOverlay[aria-hidden="false"], #spurOverlay[aria-hidden="false"] { display:block; }
+    #pinionOverlay .pp-backdrop, #spurOverlay .pp-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.5); }
+    #pinionOverlay .pp-sheet, #spurOverlay .pp-sheet {
+      position:absolute; inset:6% 2% auto 2%;
+      background:#1a1f25; border-radius:16px; box-shadow:0 8px 40px rgba(0,0,0,.45);
+      display:flex; flex-direction:column; max-height:88%;
+    }
+    @media (min-width: 500px) {
+      #pinionOverlay .pp-sheet, #spurOverlay .pp-sheet { inset:8% 20% auto 20%; }
+    }
+    .pp-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px 12px 6px; border-bottom:1px solid #2a2a2a;
+    }
+    .pp-header h2 { margin:0; font-size:1.2rem; }
+    #ppBack, #spBack {
+      background:transparent; border:0; color:#cfe6df; font-size:1.2rem; padding:6px 8px; cursor:pointer;
+    }
+    .pp-table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; }
+    .pp-table { width:100%; border-collapse:collapse; }
+    .pp-table thead th {
+      text-align:center; font-size:.8rem; opacity:.8; padding:10px 14px; border-bottom:1px solid #2a2a2a;
+    }
+    .pp-table td { padding:14px; border-bottom:1px solid #222a30; text-align:center; }
+    .pp-row { cursor:pointer; border-radius:12px; }
+    .pp-row.selected { background:#2d4a45; }
+    .pp-table td:nth-child(2), .pp-table td:nth-child(3), .pp-table td:nth-child(4) {
+      text-align:center; font-variant-numeric:tabular-nums;
+    }
 
-/* sticky header + vertical centering */
-#pinionOverlay .pp-table thead th,
-#spurOverlay   .pp-table thead th {
-  position:sticky; top:0; z-index:2;
-  background:#1a1f25; border-bottom:1px solid #2a2a2a;
-  vertical-align:middle; box-shadow:0 1px 0 rgba(0,0,0,.25);
-}
-#pinionOverlay .pp-table td,
-#spurOverlay   .pp-table td { vertical-align:middle; }
-    </style>
-  </head>
+    /* ===== Sticky header + vertical centering (applies to both overlays) ===== */
+    #pinionOverlay .pp-table-wrap, #spurOverlay .pp-table-wrap {
+      overflow:auto; -webkit-overflow-scrolling:touch; max-height:65vh;
+    }
+    #pinionOverlay .pp-table thead th, #spurOverlay .pp-table thead th {
+      position:sticky; top:0; z-index:2;
+      background:#1a1f25; border-bottom:1px solid #2a2a2a;
+      vertical-align:middle; box-shadow:0 1px 0 rgba(0,0,0,.25);
+    }
+    #pinionOverlay .pp-table td, #spurOverlay .pp-table td { vertical-align:middle; }
+
+    /* Light mode tint for sticky header (optional) */
+    body:not(.dark-mode) #pinionOverlay .pp-table thead th,
+    body:not(.dark-mode) #spurOverlay   .pp-table thead th {
+      background:#fff; border-bottom-color:#ddd; box-shadow:0 1px 0 rgba(0,0,0,0.06);
+    }
+  </style>
+</head>
 <body>
   <!-- Flyout overlay + panel -->
   <div id="flyoutOverlay" class="flyout-overlay" hidden></div>
@@ -128,6 +99,7 @@
       <a class="menu-link" href="#">🏠 Home</a>
       <a class="menu-link" href="../mileage/index.html">⛽ Fuel Calculator </a>
       <a class="menu-link" href="../gearing/index.html" aria-current="page">⚙️ Gearing & Rollout</a>
+    </div>
     <div class="flyout-footer">
       <small>v<span id="flyoutVersion">—</span></small>
     </div>
@@ -145,153 +117,157 @@
       ☰
     </button>
   </div>
-    <div class="container">
+
+  <div class="container">
     <h2>Speed & Rollout</h2>
-      <div class="grid-2">
-        <div>
-          <h3>Current</h3>
-          <label>Pinion
-            <input id="g_cur_pinion" type="number" min="5" value="20"
-                   class="pinion-picker" data-context="cur" readonly />
-          </label>
-          <label>Spur
-            <input id="g_cur_spur" type="number" value="48"
-                   class="spur-picker" data-context="cur" readonly>
-          </label>
-        </div>
 
-        <div>
-          <h3>New</h3>
-          <label>Pinion
-            <input id="g_new_pinion" type="number" min="5" value="20"
-                   class="pinion-picker" data-context="new" readonly />
-          </label>
-          <label>Spur
-            <input id="g_new_spur" type="number" value="48"
-                   class="spur-picker" data-context="new" readonly>
-          </label>
-        </div>
-
-        <!-- Centered Internal Ratio -->
-        <div class="span-2 center-field">
-          <div class="field-wrap">
-            <label id="g_internal_label">Internal Ratio
-              <input id="g_internal" type="number" step="0.001" value="3.333">
-            </label>
-            <div class="checkbox-row">
-              <input id="g_no_transmission" type="checkbox">
-              <span>No transmission, just pinion/spur.</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div>
-          <label>Tire Diameter (mm)
-            <input id="g_cur_tire" type="number" step="0.1" placeholder="e.g., 22">
-          </label>
-        </div>
-        <div>
-          <label>Tire Diameter (mm)
-            <input id="g_new_tire" type="number" step="0.1" placeholder="e.g., 24">
-          </label>
-        </div>
-      </div>
-
-      <!-- Results -->
-      <div class="grid-2">
-        <div id="block_current" class="result-box hidden">
-          <h3>Current Results</h3>
-          <div class="kv"><span>Gear Ratio</span><b id="g_cur_sp"></b></div>
-          <div class="kv"><span>FDR</span><b id="g_cur_fdr"></b></div>
-          <div class="kv"><span>Rollout</span><b id="g_cur_roll"></b></div>
-        </div>
-
-        <div id="block_new" class="result-box hidden">
-          <h3>New Results</h3>
-          <div class="kv"><span>Gear Ratio</span><b id="g_new_sp"></b></div>
-          <div class="kv"><span>FDR</span><b id="g_new_fdr"></b></div>
-          <div class="kv"><span>Rollout</span><b id="g_new_roll"></b></div>
-        </div>
-      </div>
-
-      <div id="block_delta" class="result-box hidden">
-           <div class="grid-2">
-             <div class="delta-block">
-               <div>% Change in FDR</div>
-               <div class="delta-value" id="g_delta_fdr"></div>
-             </div>
-             <div class="delta-block">
-               <div>% Change in Rollout</div>
-               <div class="delta-value" id="g_delta_roll"></div>
-             </div>
-           </div>
-         </div>
-
-      <div class="mode-toggle">
-        <label class="toggle-switch">
-          <span>Light</span>
-          <input type="checkbox" id="darkModeToggle" />
-          <span class="slider"></span>
-          <span>Dark</span>
+    <div class="grid-2">
+      <div>
+        <h3>Current</h3>
+        <label>Pinion
+          <input id="g_cur_pinion" type="number" min="5" value="20"
+                 class="pinion-picker" data-context="cur" readonly />
+        </label>
+        <label>Spur
+          <input id="g_cur_spur" type="number" value="48"
+                 class="spur-picker" data-context="cur" readonly>
         </label>
       </div>
 
-      <div id="update-notification" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#4285f4; color:#fff; padding:12px 20px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.2); font-weight:bold; cursor:pointer; z-index:1000;">
-        A new version is available. Click to update.
+      <div>
+        <h3>New</h3>
+        <label>Pinion
+          <input id="g_new_pinion" type="number" min="5" value="20"
+                 class="pinion-picker" data-context="new" readonly />
+        </label>
+        <label>Spur
+          <input id="g_new_spur" type="number" value="48"
+                 class="spur-picker" data-context="new" readonly>
+        </label>
       </div>
 
-      <footer class="app-footer">
-        App Version — <span id="appVersion"></span>
-      </footer>
-
-      <!-- Pinion Picker Overlay -->
-      <div id="pinionOverlay" aria-hidden="true">
-        <div class="pp-backdrop"></div>
-        <div class="pp-sheet" role="dialog" aria-modal="true" aria-labelledby="ppTitle">
-          <header class="pp-header">
-            <button id="ppBack" aria-label="Close">←</button>
-            <h2 id="ppTitle">Choose Pinion</h2>
-            <div style="width:40px"></div>
-          </header>
-
-          <div class="pp-table-wrap">
-            <table class="pp-table" aria-describedby="ppTitle">
-              <thead>
-                <tr>
-                  <th>PINION</th>
-                  <th>RATIO</th>
-                  <th>FDR</th>
-                  <th>ROLLOUT</th>
-                </tr>
-              </thead>
-              <tbody id="ppRows"><!-- rows injected --></tbody>
-            </table>
+      <!-- Centered Internal Ratio -->
+      <div class="span-2 center-field">
+        <div class="field-wrap">
+          <label id="g_internal_label">Internal Ratio
+            <input id="g_internal" type="number" step="0.001" value="3.333">
+          </label>
+          <div class="checkbox-row">
+            <input id="g_no_transmission" type="checkbox">
+            <span>No transmission, just pinion/spur.</span>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Spur Picker Overlay -->
-      <div id="spurOverlay" aria-hidden="true">
-        <div class="pp-backdrop"></div>
-          <div class="pp-sheet" role="dialog" aria-modal="true" aria-labelledby="spTitle">
-            <header class="pp-header">
-              <button id="spBack" aria-label="Close">←</button>
-              <h2 id="spTitle">Choose Spur</h2>
-              <div style="width:40px"></div>
-            </header>
-            <div class="pp-table-wrap">
-              <table class="pp-table" aria-describedby="spTitle">
-                <thead>
-                  <tr><th>SPUR</th><th>RATIO</th><th>FDR</th><th>ROLLOUT</th></tr>
-                </thead>
-                <tbody id="spRows"><!-- rows injected --></tbody>
-                </table>
-            </div>
-          </div>
+    <div class="grid-2">
+      <div>
+        <label>Tire Diameter (mm)
+          <input id="g_cur_tire" type="number" step="0.1" placeholder="e.g., 22">
+        </label>
+      </div>
+      <div>
+        <label>Tire Diameter (mm)
+          <input id="g_new_tire" type="number" step="0.1" placeholder="e.g., 24">
+        </label>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="grid-2">
+      <div id="block_current" class="result-box hidden">
+        <h3>Current Results</h3>
+        <div class="kv"><span>Gear Ratio</span><b id="g_cur_sp"></b></div>
+        <div class="kv"><span>FDR</span><b id="g_cur_fdr"></b></div>
+        <div class="kv"><span>Rollout</span><b id="g_cur_roll"></b></div>
+      </div>
+
+      <div id="block_new" class="result-box hidden">
+        <h3>New Results</h3>
+        <div class="kv"><span>Gear Ratio</span><b id="g_new_sp"></b></div>
+        <div class="kv"><span>FDR</span><b id="g_new_fdr"></b></div>
+        <div class="kv"><span>Rollout</span><b id="g_new_roll"></b></div>
+      </div>
+    </div>
+
+    <div id="block_delta" class="result-box hidden">
+      <div class="grid-2">
+        <div class="delta-block">
+          <div>% Change in FDR</div>
+          <div class="delta-value" id="g_delta_fdr"></div>
         </div>
+        <div class="delta-block">
+          <div>% Change in Rollout</div>
+          <div class="delta-value" id="g_delta_roll"></div>
+        </div>
+      </div>
+    </div>
 
-    <script src="gear-speed.js"></script>
-  </body>
-  </html>
+    <div class="mode-toggle">
+      <label class="toggle-switch">
+        <span>Light</span>
+        <input type="checkbox" id="darkModeToggle" />
+        <span class="slider"></span>
+        <span>Dark</span>
+      </label>
+    </div>
+
+    <div id="update-notification" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#4285f4; color:#fff; padding:12px 20px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.2); font-weight:bold; cursor:pointer; z-index:1000;">
+      A new version is available. Click to update.
+    </div>
+
+    <footer class="app-footer">
+      App Version — <span id="appVersion"></span>
+    </footer>
+
+    <!-- Pinion Picker Overlay -->
+    <div id="pinionOverlay" aria-hidden="true">
+      <div class="pp-backdrop"></div>
+      <div class="pp-sheet" role="dialog" aria-modal="true" aria-labelledby="ppTitle">
+        <header class="pp-header">
+          <button id="ppBack" aria-label="Close">←</button>
+          <h2 id="ppTitle">Choose Pinion</h2>
+          <div style="width:40px"></div>
+        </header>
+
+        <div class="pp-table-wrap">
+          <table class="pp-table" aria-describedby="ppTitle">
+            <thead>
+              <tr>
+                <th>PINION</th>
+                <th>RATIO</th>
+                <th>FDR</th>
+                <th>ROLLOUT</th>
+              </tr>
+            </thead>
+            <tbody id="ppRows"><!-- rows injected --></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spur Picker Overlay -->
+    <div id="spurOverlay" aria-hidden="true">
+      <div class="pp-backdrop"></div>
+      <div class="pp-sheet" role="dialog" aria-modal="true" aria-labelledby="spTitle">
+        <header class="pp-header">
+          <button id="spBack" aria-label="Close">←</button>
+          <h2 id="spTitle">Choose Spur</h2>
+          <div style="width:40px"></div>
+        </header>
+        <div class="pp-table-wrap">
+          <table class="pp-table" aria-describedby="spTitle">
+            <thead>
+              <tr><th>SPUR</th><th>RATIO</th><th>FDR</th><th>ROLLOUT</th></tr>
+            </thead>
+            <tbody id="spRows"><!-- rows injected --></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /.container -->
+
+  <script src="gear-speed.js"></script>
+</body>
+</html>
