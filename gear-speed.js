@@ -300,6 +300,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (savedBypass !== null) $('g_no_transmission').checked = savedBypass === 'true';
 
   update();
+
+  // Initialize overlay remembered selections from inputs/storage
+  pp.state.selected.cur = +($('g_cur_pinion')?.value) || +(safeGet(KEYS.curPinion) || 0) || null;
+  pp.state.selected.new = +($('g_new_pinion')?.value) || +(safeGet(KEYS.newPinion) || 0) || null;
 });
 
 /* ---------------- Pinion Picker ---------------- */
@@ -312,9 +316,10 @@ const pp = {
     title: document.getElementById('ppTitle'),
   },
   state: {
-    context: 'cur',   // 'cur' or 'new' – which input launched the picker
+    context: 'cur',         // 'cur' or 'new' – which input launched the picker
     pinionMin: 5,
-    pinionMax: 70
+    pinionMax: 70,
+    selected: { cur: null, new: null } // remember per-context selection
   }
 };
 
@@ -347,7 +352,17 @@ function renderPinionRows() {
   const tire = +(document.getElementById(`g_${ctx}_tire`).value ||
                  document.getElementById('g_cur_tire').value);
 
-  const selectedPinion = +document.getElementById(`g_${ctx}_pinion`).value;
+  // Determine which pinion should be highlighted
+  const selectedPinion = (() => {
+    const fromInput = +document.getElementById(`g_${ctx}_pinion`).value;
+    if (Number.isFinite(fromInput) && fromInput > 0) return fromInput;
+
+    const fromState = pp.state.selected[ctx];
+    if (Number.isFinite(fromState) && fromState > 0) return fromState;
+
+    const fromStore = +(safeGet(ctx === 'cur' ? KEYS.curPinion : KEYS.newPinion) || 0);
+    return Number.isFinite(fromStore) && fromStore > 0 ? fromStore : null;
+  })();
 
   const rows = [];
   for (let pin = pp.state.pinionMin; pin <= pp.state.pinionMax; pin++) {
@@ -378,6 +393,10 @@ function renderPinionRows() {
     tr.addEventListener('click', () => {
       const chosen = +tr.getAttribute('data-pinion');
       document.getElementById(`g_${ctx}_pinion`).value = chosen;
+
+      // remember selection for next time
+      pp.state.selected[ctx] = chosen;
+
       update();
       closePinionPicker();
     });
