@@ -21,17 +21,14 @@ const KEYS = {
 function safeSet(key, value) { try { localStorage.setItem(key, value); } catch (_) {} }
 function safeGet(key)       { try { return localStorage.getItem(key); } catch (_) { return null; } }
 
-// write the current value of an input to storage (as string)
 function persistInput(id, key) {
   const el = $(id);
   if (!el) return;
   const v = el.value;
-  // Don’t persist internal if bypass is checked; keep last “real” value intact
   if (id === 'g_internal' && $('g_no_transmission').checked) return;
   if (v !== '' && v != null) safeSet(key, v);
 }
 
-// load from storage into an input if available
 function restoreInput(id, key) {
   const el = $(id);
   if (!el) return;
@@ -39,168 +36,59 @@ function restoreInput(id, key) {
   if (v !== null && v !== '') el.value = v;
 }
 
-// ---- Light/Dark mode ----
+/* ==== Theme ==== */
 (function themeInit(){
   const toggle = document.getElementById('darkModeToggle');
   if (!toggle) return;
-
-  const KEYS = ['fuelcalc.theme','darkMode','theme'];  // be compatible with main app if keys differ
-  const getSaved = () => {
-    for (const k of KEYS) { const v = localStorage.getItem(k); if (v) return v; }
-    return null;
-  };
-  const save = (mode) => { try { localStorage.setItem(KEYS[0], mode); } catch {} };
-
-  const apply = (mode) => {
-    const isDark = mode === 'dark';
-    document.body.classList.toggle('dark-mode', isDark);
-    toggle.checked = isDark;
-  };
-
-  // initial: use saved → or OS preference → default light
+  const PREF_KEYS = ['fuelcalc.theme','darkMode','theme'];
+  const getSaved = () => { for (const k of PREF_KEYS){ const v=localStorage.getItem(k); if(v) return v; } return null; };
+  const apply = m => { const d = m==='dark'; document.body.classList.toggle('dark-mode',d); toggle.checked=d; };
   const saved = getSaved();
-  const initial = saved ? saved
-                        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  apply(initial);
-
-  toggle.addEventListener('change', () => {
-    const mode = toggle.checked ? 'dark' : 'light';
-    apply(mode);
-    save(mode);
-  });
-
-  // keep in sync if OS theme changes and user hasn’t set a preference
-  if (!saved && window.matchMedia) {
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-      apply(e.matches ? 'dark' : 'light');
-    });
-  }
+  apply(saved ? saved : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light'));
+  toggle.addEventListener('change', ()=> apply(toggle.checked?'dark':'light'));
 })();
 
-/* === Flyout menu with focus trap === */
+/* ==== Flyout ==== */
 (function flyoutInit(){
-  const openBtn   = $('flyoutOpen');
-  const closeBtn  = $('flyoutClose');
-  const panel     = $('flyoutPanel');
-  const overlay   = $('flyoutOverlay');
-  const versionEl = $('flyoutVersion');
-
-  if (!openBtn || !panel || !overlay) return;
-
-  // optional: mirror app version into panel footer
-  try {
-    const mainVer = $('appVersion')?.textContent?.trim();
-    if (mainVer && versionEl) versionEl.textContent = mainVer;
-  } catch {}
-
-  let prevFocus = null;
-
-  // return all focusable elements inside the panel (live each time)
-  const getFocusables = () => {
-    const list = panel.querySelectorAll(
-      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    );
-    return Array.from(list).filter(el => el.offsetParent !== null);
+  const openBtn=$('flyoutOpen'), closeBtn=$('flyoutClose'), panel=$('flyoutPanel'), overlay=$('flyoutOverlay');
+  if(!openBtn||!panel||!overlay) return;
+  let prevFocus=null;
+  const getFocusables=()=>Array.from(panel.querySelectorAll(
+    'a[href],button:not([disabled]),input:not([disabled]),[tabindex]:not([tabindex="-1"])'
+  )).filter(el=>el.offsetParent!==null);
+  function open(){ prevFocus=document.activeElement; panel.classList.add('open'); overlay.hidden=false;
+    requestAnimationFrame(()=>overlay.classList.add('show')); openBtn.setAttribute('aria-expanded','true');
+    panel.setAttribute('aria-hidden','false'); (getFocusables()[0]||closeBtn||panel).focus();
+    overlay.addEventListener('click', close, {once:true}); document.addEventListener('keydown', onKey);
+    panel.addEventListener('keydown', trapTab); panel.addEventListener('click', onLink);
+  }
+  function close(){ panel.classList.remove('open'); overlay.classList.remove('show');
+    openBtn.setAttribute('aria-expanded','false'); panel.setAttribute('aria-hidden','true');
+    setTimeout(()=>overlay.hidden=true,200); document.removeEventListener('keydown', onKey);
+    panel.removeEventListener('keydown', trapTab); panel.removeEventListener('click', onLink);
+    (prevFocus||openBtn).focus();
+  }
+  const onKey=e=>{ if(e.key==='Escape'){ e.preventDefault(); close(); } };
+  const trapTab=e=>{ if(e.key!=='Tab') return; const f=getFocusables(); if(!f.length) return;
+    const first=f[0], last=f[f.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
   };
-
-  function openFlyout(){
-    prevFocus = document.activeElement;
-    panel.classList.add('open');
-    overlay.hidden = false;
-    requestAnimationFrame(()=> overlay.classList.add('show'));
-
-    openBtn.setAttribute('aria-expanded', 'true');
-    panel.setAttribute('aria-hidden', 'false');
-
-    // focus first focusable or close button/panel
-    const f = getFocusables()[0] || closeBtn || panel;
-    f.focus();
-
-    overlay.addEventListener('click', closeFlyout, { once: true });
-    document.addEventListener('keydown', onKeydown);
-    panel.addEventListener('keydown', trapTab);
-    // close on link click inside the panel
-    panel.addEventListener('click', onLinkClick);
-  }
-
-  function closeFlyout(){
-    panel.classList.remove('open');
-    overlay.classList.remove('show');
-    openBtn.setAttribute('aria-expanded', 'false');
-    panel.setAttribute('aria-hidden', 'true');
-
-    setTimeout(()=> overlay.hidden = true, 200);
-
-    document.removeEventListener('keydown', onKeydown);
-    panel.removeEventListener('keydown', trapTab);
-    panel.removeEventListener('click', onLinkClick);
-
-    // restore focus
-    (prevFocus || openBtn).focus();
-  }
-
-  function onKeydown(e){
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      closeFlyout();
-    }
-  }
-
-  // Keep tab focus inside panel when open
-  function trapTab(e){
-    if (e.key !== 'Tab') return;
-    const focusables = getFocusables();
-    if (!focusables.length) return;
-
-    const first = focusables[0];
-    const last  = focusables[focusables.length - 1];
-
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  }
-
-  function onLinkClick(e){
-    const link = e.target.closest('a.menu-link');
-    if (!link) return;
-    // close panel; navigation will proceed
-    panel.classList.remove('open');
-    overlay.classList.remove('show');
-    setTimeout(()=> overlay.hidden = true, 200);
-  }
-
-  openBtn.addEventListener('click', openFlyout);
-  closeBtn?.addEventListener('click', closeFlyout);
+  const onLink=e=>{ if(e.target.closest('a.menu-link')) close(); };
+  openBtn.addEventListener('click', open); closeBtn?.addEventListener('click', close);
 })();
 
-// ---------- UI / math ----------
-function effectiveInternalRatio() {
-  // If bypass checked, compute with 1.0 — but keep input editable
-  return $('g_no_transmission').checked ? 1 : (+$('g_internal').value || 0);
-}
+/* ==== Core math/UI ==== */
+function effectiveInternalRatio(){ return $('g_no_transmission').checked ? 1 : (+$('g_internal').value || 0); }
+function setInternalUIState(){ $('g_internal_label').classList.toggle('dimmed', $('g_no_transmission').checked); }
+const hasValid = (p,s,t,i)=> p>0 && s>0 && t>0 && i>0;
+const show=(el,flag)=> el.classList.toggle('hidden', !flag);
+const clearTexts=ids=> ids.forEach(id=> $(id).textContent='');
 
-function setInternalUIState() {
-  // purely visual: dim the label when bypass is on, keep input enabled/editable
-  const bypass = $('g_no_transmission').checked;
-  const label = $('g_internal_label');
-  label.classList.toggle('dimmed', !!bypass);
-}
-
-function hasValidInputs(pinion, spur, tire, internalEff) {
-  return pinion > 0 && spur > 0 && tire > 0 && internalEff > 0;
-}
-
-function show(el, flag) { el.classList.toggle('hidden', !flag); }
-function clearTexts(ids) { ids.forEach(id => $(id).textContent = ''); }
-
-function update() {
+function update(){
   setInternalUIState();
 
-  // persist current values (numbers as strings)
+  // persist
   persistInput('g_cur_pinion', KEYS.curPinion);
   persistInput('g_cur_spur',   KEYS.curSpur);
   persistInput('g_cur_tire',   KEYS.curTire);
@@ -211,83 +99,53 @@ function update() {
   safeSet(KEYS.noTransmission, String($('g_no_transmission').checked));
 
   const internal = effectiveInternalRatio();
+  const cur = { pinion:+$('g_cur_pinion').value, spur:+$('g_cur_spur').value, tire:+$('g_cur_tire').value };
+  const neu = { pinion:+$('g_new_pinion').value, spur:+$('g_new_spur').value, tire:+($('g_new_tire').value||cur.tire) };
 
-  const cur = {
-    pinion: +$('g_cur_pinion').value,
-    spur:   +$('g_cur_spur').value,
-    tire:   +$('g_cur_tire').value
-  };
-  const neu = {
-    pinion: +$('g_new_pinion').value,
-    spur:   +$('g_new_spur').value,
-    tire:   +($('g_new_tire').value || cur.tire)
-  };
+  const vCur = hasValid(cur.pinion,cur.spur,cur.tire,internal);
+  const vNew = hasValid(neu.pinion,neu.spur,neu.tire,internal);
 
-  const validCur = hasValidInputs(cur.pinion, cur.spur, cur.tire, internal);
-  const validNew = hasValidInputs(neu.pinion, neu.spur, neu.tire, internal);
+  if (vCur){
+    $('g_cur_sp').textContent   = round(spurPinionRatio(cur.spur,cur.pinion),3);
+    const fdr = finalDriveRatio(cur.spur,cur.pinion,internal);
+    $('g_cur_fdr').textContent  = round(fdr,3);
+    $('g_cur_roll').textContent = round(rolloutMMPerMotorRev(cur.tire,fdr),3);
+  } else clearTexts(['g_cur_sp','g_cur_fdr','g_cur_roll']);
+  show($('block_current'), vCur);
 
-  if (validCur) {
-    const curSP = spurPinionRatio(cur.spur, cur.pinion);
-    const curFDR = finalDriveRatio(cur.spur, cur.pinion, internal);
-    const curRoll = rolloutMMPerMotorRev(cur.tire, curFDR);
-    $('g_cur_sp').textContent   = round(curSP, 3);
-    $('g_cur_fdr').textContent  = round(curFDR, 3);
-    $('g_cur_roll').textContent = round(curRoll, 3);
-  } else {
-    clearTexts(['g_cur_sp','g_cur_fdr','g_cur_roll']);
-  }
-  show($('block_current'), validCur);
+  if (vNew){
+    $('g_new_sp').textContent   = round(spurPinionRatio(neu.spur,neu.pinion),3);
+    const fdr = finalDriveRatio(neu.spur,neu.pinion,internal);
+    $('g_new_fdr').textContent  = round(fdr,3);
+    $('g_new_roll').textContent = round(rolloutMMPerMotorRev(neu.tire,fdr),3);
+  } else clearTexts(['g_new_sp','g_new_fdr','g_new_roll']);
+  show($('block_new'), vNew);
 
-  if (validNew) {
-    const newSP = spurPinionRatio(neu.spur, neu.pinion);
-    const newFDR = finalDriveRatio(neu.spur, neu.pinion, internal);
-    const newRoll = rolloutMMPerMotorRev(neu.tire, newFDR);
-    $('g_new_sp').textContent   = round(newSP, 3);
-    $('g_new_fdr').textContent  = round(newFDR, 3);
-    $('g_new_roll').textContent = round(newRoll, 3);
-  } else {
-    clearTexts(['g_new_sp','g_new_fdr','g_new_roll']);
-  }
-  show($('block_new'), validNew);
-
-  if (validCur && validNew) {
-    const dFDR  = (+( $('g_new_fdr').textContent ) / +( $('g_cur_fdr').textContent ) - 1) * 100;
-    const dRoll = (+( $('g_new_roll').textContent ) / +( $('g_cur_roll').textContent ) - 1) * 100;
-
-    function setDelta(el, val) {
-      el.textContent = isFinite(val) ? `${round(val,2)}%` : '—';
-      el.classList.remove('delta-positive','delta-negative','delta-neutral');
-      if (!isFinite(val)) {
-        el.classList.add('delta-neutral');
-      } else if (val > 0) {
-        el.classList.add('delta-positive');
-      } else if (val < 0) {
-        el.classList.add('delta-negative');
-      } else {
-        el.classList.add('delta-neutral');
-      }
-    }
-
-    setDelta($('g_delta_fdr'), dFDR);
-    setDelta($('g_delta_roll'), dRoll);
+  if (vCur && vNew){
+    const dFDR  = (+$('g_new_fdr').textContent / +$('g_cur_fdr').textContent - 1) * 100;
+    const dRoll = (+$('g_new_roll').textContent / +$('g_cur_roll').textContent - 1) * 100;
+    const setΔ=(el,val)=>{ el.textContent = isFinite(val) ? `${round(val,2)}%` : '—';
+      el.className = 'delta-value ' + (!isFinite(val) ? 'delta-neutral' : (val>0?'delta-positive':val<0?'delta-negative':'delta-neutral'));
+    };
+    setΔ($('g_delta_fdr'), dFDR);
+    setΔ($('g_delta_roll'), dRoll);
     show($('block_delta'), true);
   } else {
     clearTexts(['g_delta_fdr','g_delta_roll']);
-    $('g_delta_fdr').className = 'delta-value delta-neutral';
-    $('g_delta_roll').className = 'delta-value delta-neutral';
+    $('g_delta_fdr').className='delta-value delta-neutral';
+    $('g_delta_roll').className='delta-value delta-neutral';
     show($('block_delta'), false);
   }
 }
 
-// ---------- init ----------
+// init restore
 [
   'g_cur_pinion','g_cur_spur','g_cur_tire',
   'g_new_pinion','g_new_spur','g_new_tire',
   'g_internal','g_no_transmission'
 ].forEach(id => $(id).addEventListener('input', update));
 
-document.addEventListener('DOMContentLoaded', () => {
-  // restore all persisted values (order matters a bit for UX)
+document.addEventListener('DOMContentLoaded', ()=>{
   restoreInput('g_cur_pinion', KEYS.curPinion);
   restoreInput('g_cur_spur',   KEYS.curSpur);
   restoreInput('g_cur_tire',   KEYS.curTire);
@@ -295,134 +153,140 @@ document.addEventListener('DOMContentLoaded', () => {
   restoreInput('g_new_spur',   KEYS.newSpur);
   restoreInput('g_new_tire',   KEYS.newTire);
   restoreInput('g_internal',   KEYS.internalRatio);
-
   const savedBypass = safeGet(KEYS.noTransmission);
   if (savedBypass !== null) $('g_no_transmission').checked = savedBypass === 'true';
-
   update();
 
-  // Initialize overlay remembered selections from inputs/storage
-  pp.state.selected.cur = +($('g_cur_pinion')?.value) || +(safeGet(KEYS.curPinion) || 0) || null;
-  pp.state.selected.new = +($('g_new_pinion')?.value) || +(safeGet(KEYS.newPinion) || 0) || null;
+  // initialize overlay remembered selections from inputs/storage
+  chooser.state.pinion.selected.cur = +($('g_cur_pinion')?.value) || +(safeGet(KEYS.curPinion) || 0) || null;
+  chooser.state.pinion.selected.new = +($('g_new_pinion')?.value) || +(safeGet(KEYS.newPinion) || 0) || null;
+  chooser.state.spur.selected.cur   = +($('g_cur_spur')?.value)   || +(safeGet(KEYS.curSpur)   || 0) || null;
+  chooser.state.spur.selected.new   = +($('g_new_spur')?.value)   || +(safeGet(KEYS.newSpur)   || 0) || null;
 });
 
-/* ---------------- Pinion Picker ---------------- */
+/* ============================================================
+   REUSABLE CHOOSER (Pinion + Spur)
+   ============================================================ */
 
-const pp = {
+const chooser = {
+  // DOM refs for both overlays
   el: {
-    root: document.getElementById('pinionOverlay'),
-    rows: document.getElementById('ppRows'),
-    back: document.getElementById('ppBack'),
-    title: document.getElementById('ppTitle'),
+    pinion: { root: $('pinionOverlay'), rows: $('ppRows'), back: $('ppBack'), title: $('ppTitle') },
+    spur:   { root: $('spurOverlay'),   rows: $('spRows'), back: $('spBack'), title: $('spTitle') }
   },
   state: {
-    context: 'cur',         // 'cur' or 'new' – which input launched the picker
-    pinionMin: 5,
-    pinionMax: 70,
-    selected: { cur: null, new: null } // remember per-context selection
+    context: 'cur',         // 'cur' | 'new'
+    type: 'pinion',         // 'pinion' | 'spur'
+    pinion: { min:5,  max:70, selected:{ cur:null, new:null } },
+    spur:   { min:20, max:160, selected:{ cur:null, new:null } } // adjust range as you like
   }
 };
 
-// open the overlay
-function openPinionPicker(context) {
-  pp.state.context = context;
-  pp.el.title.textContent = 'Choose Pinion';
-  renderPinionRows();
-  pp.el.root.setAttribute('aria-hidden', 'false');
+// open helper
+function openChooser(type, context){
+  chooser.state.type = type;            // 'pinion' | 'spur'
+  chooser.state.context = context;      // 'cur' | 'new'
+  const el = chooser.el[type];
+  if (!el?.root) return;
+
+  el.title.textContent = type === 'pinion' ? 'Choose Pinion' : 'Choose Spur';
+  renderChooser();
+  el.root.setAttribute('aria-hidden','false');
 }
 
-// close the overlay
-function closePinionPicker() {
-  pp.el.root.setAttribute('aria-hidden', 'true');
+// close helper
+function closeChooser(){
+  const {type} = chooser.state;
+  chooser.el[type].root.setAttribute('aria-hidden','true');
 }
 
-// compute rollout units (we’ll show cm by default for a tidy number)
-function rolloutCMPerMotorRev(tireMM, fdr) {
+// rollout in cm per motor rev (clean numbers)
+function rolloutCMPerMotorRev(tireMM, fdr){
   if (!tireMM || !fdr) return null;
-  return (Math.PI * tireMM) / fdr / 10; // cm
+  return (Math.PI * tireMM) / fdr / 10;
 }
 
-function renderPinionRows() {
-  const ctx = pp.state.context === 'cur' ? 'cur' : 'new';
-
-  const spur = +document.getElementById(`g_${ctx}_spur`).value;
-  // Use single shared Internal Ratio field
+function renderChooser(){
+  const { type, context } = chooser.state;
+  const els = chooser.el[type];
   const internal = effectiveInternalRatio();
-  // prefer “new” tire if present when context is new; else fall back to current
-  const tire = +(document.getElementById(`g_${ctx}_tire`).value ||
-                 document.getElementById('g_cur_tire').value);
+  const tire = +( $(`g_${context}_tire`)?.value || $('g_cur_tire')?.value );
 
-  // Determine which pinion should be highlighted
-  const selectedPinion = (() => {
-    const fromInput = +document.getElementById(`g_${ctx}_pinion`).value;
-    if (Number.isFinite(fromInput) && fromInput > 0) return fromInput;
+  // fixed partner gear from inputs
+  const pinionFixed = +$(`g_${context}_pinion`)?.value || 0;
+  const spurFixed   = +$(`g_${context}_spur`)?.value   || 0;
 
-    const fromState = pp.state.selected[ctx];
-    if (Number.isFinite(fromState) && fromState > 0) return fromState;
-
-    const fromStore = +(safeGet(ctx === 'cur' ? KEYS.curPinion : KEYS.newPinion) || 0);
-    return Number.isFinite(fromStore) && fromStore > 0 ? fromStore : null;
+  // selected value (from input → memory → storage)
+  const selected = (() => {
+    const fromInput = +( type === 'pinion' ? $(`g_${context}_pinion`)?.value : $(`g_${context}_spur`)?.value );
+    if (fromInput > 0) return fromInput;
+    const fromState = chooser.state[type].selected[context];
+    if (fromState > 0) return fromState;
+    const fromStore = +( safeGet( context==='cur'
+      ? (type==='pinion'?KEYS.curPinion:KEYS.curSpur)
+      : (type==='pinion'?KEYS.newPinion:KEYS.newSpur)) || 0);
+    return fromStore > 0 ? fromStore : null;
   })();
 
-  const rows = [];
-  for (let pin = pp.state.pinionMin; pin <= pp.state.pinionMax; pin++) {
-    const ratio = spur / pin;
-    const fdr = ratio * internal;
-    const rollCm = rolloutCMPerMotorRev(tire, fdr); // may be null if tire not set
-
-    rows.push({
-      pinion: pin,
-      ratio: isFinite(ratio) ? ratio : 0,
-      fdr: isFinite(fdr) ? fdr : 0,
-      rollout: rollCm
-    });
+  const rows=[];
+  if (type === 'pinion'){
+    for (let pin=chooser.state.pinion.min; pin<=chooser.state.pinion.max; pin++){
+      const ratio = spurFixed / pin;
+      const fdr   = ratio * internal;
+      rows.push({ value:pin, ratio, fdr, rollout: rolloutCMPerMotorRev(tire,fdr) });
+    }
+  } else { // spur
+    for (let spur=chooser.state.spur.min; spur<=chooser.state.spur.max; spur++){
+      const ratio = spur / pinionFixed;
+      const fdr   = ratio * internal;
+      rows.push({ value:spur, ratio, fdr, rollout: rolloutCMPerMotorRev(tire,fdr) });
+    }
   }
 
-  pp.el.rows.innerHTML = rows.map(r => `
-    <tr class="pp-row ${r.pinion === selectedPinion ? 'selected' : ''}"
-        data-pinion="${r.pinion}">
-      <td><b>${r.pinion}</b></td>
-      <td>${round(r.ratio, 2)}</td>
-      <td>${round(r.fdr, 2)}</td>
-      <td>${r.rollout == null ? '—' : round(r.rollout, 2)}</td>
+  els.rows.innerHTML = rows.map(r => `
+    <tr class="pp-row ${r.value === selected ? 'selected' : ''}" data-v="${r.value}">
+      <td><b>${r.value}</b></td>
+      <td>${round(r.ratio,2)}</td>
+      <td>${round(r.fdr,2)}</td>
+      <td>${r.rollout==null ? '—' : round(r.rollout,2)}</td>
     </tr>
   `).join('');
 
   // click-to-select
-  Array.from(pp.el.rows.querySelectorAll('.pp-row')).forEach(tr => {
-    tr.addEventListener('click', () => {
-      const chosen = +tr.getAttribute('data-pinion');
-      document.getElementById(`g_${ctx}_pinion`).value = chosen;
+  els.rows.querySelectorAll('.pp-row').forEach(tr=>{
+    tr.addEventListener('click', ()=>{
+      const chosen = +tr.getAttribute('data-v');
+      if (type === 'pinion') $(`g_${context}_pinion`).value = chosen;
+      else                   $(`g_${context}_spur`).value   = chosen;
 
       // remember selection for next time
-      pp.state.selected[ctx] = chosen;
+      chooser.state[type].selected[context] = chosen;
 
       update();
-      closePinionPicker();
+      closeChooser();
     });
   });
 }
 
-// open from either input
-Array.from(document.querySelectorAll('.pinion-picker')).forEach(input => {
-  // visually still looks like an input; treat as button
-  input.addEventListener('click', () => {
-    const ctx = input.getAttribute('data-context'); // 'cur' or 'new'
-    openPinionPicker(ctx);
-  });
-  // prevent keyboard from showing on mobile
-  input.addEventListener('focus', () => { input.blur(); });
+// bind openers (pinion & spur)
+document.querySelectorAll('.pinion-picker').forEach(inp=>{
+  inp.addEventListener('click', ()=> openChooser('pinion', inp.dataset.context || 'cur'));
+  inp.addEventListener('focus', ()=> inp.blur());
+});
+document.querySelectorAll('.spur-picker').forEach(inp=>{
+  inp.addEventListener('click', ()=> openChooser('spur', inp.dataset.context || 'cur'));
+  inp.addEventListener('focus', ()=> inp.blur());
 });
 
-// close actions
-pp.el.back.addEventListener('click', closePinionPicker);
-pp.el.root.querySelector('.pp-backdrop').addEventListener('click', closePinionPicker);
+// bind closers for both overlays
+chooser.el.pinion.back?.addEventListener('click', closeChooser);
+chooser.el.pinion.root?.querySelector('.pp-backdrop')?.addEventListener('click', closeChooser);
+chooser.el.spur.back?.addEventListener('click', closeChooser);
+chooser.el.spur.root?.querySelector('.pp-backdrop')?.addEventListener('click', closeChooser);
 
-// re-render list if upstream numbers change (spur/internal/tire)
-['g_cur_spur','g_internal','g_cur_tire','g_new_spur','g_new_tire']
-  .forEach(id=>{
-    const n = document.getElementById(id);
-    if (n) n.addEventListener('input', () => {
-      if (pp.el.root.getAttribute('aria-hidden') === 'false') renderPinionRows();
-    });
-  });
+// live re-render while open if related inputs change
+['g_cur_spur','g_cur_pinion','g_cur_tire','g_internal','g_new_spur','g_new_pinion','g_new_tire']
+  .forEach(id => $(id)?.addEventListener('input', ()=>{
+    const {type} = chooser.state;
+    if (chooser.el[type].root?.getAttribute('aria-hidden')==='false') renderChooser();
+  }));
