@@ -18,6 +18,7 @@
     .center-field { display:flex; flex-direction:column; align-items:center; }
     .center-field .field-wrap { width: 100%; max-width: 300px; }
     .kv { display:flex; justify-content:space-between; gap:12px; margin:8px 0; }
+
     .result-box {
       margin: 20px 0 30px; padding: 20px 20px 30px;
       background: #eef3fa; border-radius: 8px;
@@ -26,6 +27,7 @@
       transition: background-color 0.3s;
     }
     body.dark-mode .result-box { background:#303841; }
+
     .checkbox-row { display:flex; align-items:center; gap:8px; margin:-10px 0 30px; }
     input[type="checkbox"] { inline-size: 18px; block-size: 18px; }
     .dimmed { opacity:.5; }
@@ -51,28 +53,22 @@
     .pp-header h2 { margin:0; font-size:1.2rem; }
     #ppBack, #spBack { background:transparent; border:0; color:#cfe6df; font-size:1.2rem; padding:6px 8px; cursor:pointer; }
 
-    .pp-table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; max-height:65vh; }
+    /* Table + sticky header + vertical centering (both overlays) */
+    #pinionOverlay .pp-table-wrap, #spurOverlay .pp-table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; max-height:65vh; }
     .pp-table { width:100%; border-collapse:collapse; }
-    .pp-table thead th { text-align:center; font-size:.8rem; opacity:.8; padding:10px 14px; border-bottom:1px solid #2a2a2a; }
-
-    /* Sticky header + vertical centering */
-    #pinionOverlay .pp-table thead th, #spurOverlay .pp-table thead th {
+    .pp-table thead th {
       position:sticky; top:0; z-index:2;
-      background:#1a1f25; border-bottom:1px solid #2a2a2a;
-      vertical-align:middle; box-shadow:0 1px 0 rgba(0,0,0,.25);
+      text-align:center; font-size:.8rem; opacity:.9; padding:10px 14px;
+      background:#1a1f25; border-bottom:1px solid #2a2a2a; box-shadow:0 1px 0 rgba(0,0,0,.25);
+      vertical-align:middle;
     }
-    #pinionOverlay .pp-table td, #spurOverlay .pp-table td { vertical-align:middle; }
-
-    .pp-table td { padding:14px; border-bottom:1px solid #222a30; text-align:center; }
+    .pp-table td { padding:14px; border-bottom:1px solid #222a30; text-align:center; vertical-align:middle; }
     .pp-row { cursor:pointer; border-radius:12px; }
     .pp-row.selected { background:#2d4a45; }
     .pp-table td:nth-child(2), .pp-table td:nth-child(3), .pp-table td:nth-child(4) { text-align:center; font-variant-numeric:tabular-nums; }
 
     /* Light mode sticky header tint */
-    body:not(.dark-mode) #pinionOverlay .pp-table thead th,
-    body:not(.dark-mode) #spurOverlay   .pp-table thead th {
-      background:#fff; border-bottom-color:#ddd; box-shadow:0 1px 0 rgba(0,0,0,.06);
-    }
+    body:not(.dark-mode) .pp-table thead th { background:#fff; border-bottom-color:#ddd; box-shadow:0 1px 0 rgba(0,0,0,.06); }
   </style>
 </head>
 <body>
@@ -106,24 +102,20 @@
       <div>
         <h3>Current</h3>
         <label>Pinion
-          <input id="g_cur_pinion" type="number" min="5" value="20"
-                 class="pinion-picker" data-context="cur" readonly />
+          <input id="g_cur_pinion" type="number" min="5" value="20" class="pinion-picker" data-context="cur" readonly />
         </label>
         <label>Spur
-          <input id="g_cur_spur" type="number" value="48"
-                 class="spur-picker" data-context="cur" readonly>
+          <input id="g_cur_spur" type="number" value="48" class="spur-picker" data-context="cur" readonly>
         </label>
       </div>
 
       <div>
         <h3>New</h3>
         <label>Pinion
-          <input id="g_new_pinion" type="number" min="5" value="20"
-                 class="pinion-picker" data-context="new" readonly />
+          <input id="g_new_pinion" type="number" min="5" value="20" class="pinion-picker" data-context="new" readonly />
         </label>
         <label>Spur
-          <input id="g_new_spur" type="number" value="48"
-                 class="spur-picker" data-context="new" readonly>
+          <input id="g_new_spur" type="number" value="48" class="spur-picker" data-context="new" readonly>
         </label>
       </div>
 
@@ -245,3 +237,4 @@
   <script src="gear-speed.js"></script>
 </body>
 </html>
+
