@@ -19,6 +19,20 @@
     .center-field .field-wrap { width: 100%; max-width: 300px; }
     .kv { display:flex; justify-content:space-between; gap:12px; margin:8px 0; }
 
+    /* Highlight Current vs New columns */
+    .grid-2 > div:nth-child(1) {
+      background: #f9fbff;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .grid-2 > div:nth-child(2) {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    body.dark-mode .grid-2 > div:nth-child(1) { background: #2a323c; }
+    body.dark-mode .grid-2 > div:nth-child(2) { background: #1e252d; }
+
     .result-box {
       margin: 20px 0 30px; padding: 20px 20px 30px;
       background: #eef3fa; border-radius: 8px;
@@ -73,7 +87,7 @@
     /* Light mode sticky header tint */
     body:not(.dark-mode) #pinionOverlay .pp-table thead th,
     body:not(.dark-mode) #spurOverlay   .pp-table thead th {
-      background:#fff; border-bottom-color:#ddd; box-shadow:0 1px 0 rgba(0,0,0,.06);
+      background:#fff; border-bottom-color:#ddd; box-shadow:0 1px 0 rgba(0,0,0,0.06);
     }
 
     /* ===== Drawer (details/summary) ===== */
@@ -98,7 +112,6 @@
       gap: 10px;
       user-select: none;
     }
-    /* Chevron */
     details.drawer > summary::before {
       content: '▸';
       transition: transform .2s ease;
@@ -113,13 +126,10 @@
     body.dark-mode details.drawer .drawer-content {
       border-top-color: rgba(255,255,255,0.08);
     }
-    details.drawer ol {
-      margin: 8px 0 0 20px;
-    }
+    details.drawer ol { margin: 8px 0 0 20px; }
   </style>
 </head>
 <body>
-  <!-- Flyout overlay + panel -->
   <div id="flyoutOverlay" class="flyout-overlay" hidden></div>
   <nav id="flyoutPanel" class="flyout-panel" aria-hidden="true" aria-label="FuelCalc menu">
     <div class="flyout-header">
@@ -196,7 +206,6 @@
       </div>
     </div>
 
-    <!-- Results -->
     <div class="grid-2">
       <div id="block_current" class="result-box hidden">
         <h3>Current Results</h3>
@@ -226,7 +235,7 @@
       </div>
     </div>
 
-    <!-- NEW: Practical Implications Drawer -->
+    <!-- Drawer: Practical Implications -->
     <details class="drawer" id="kv-implications">
       <summary>Practical implications</summary>
       <div class="drawer-content">
