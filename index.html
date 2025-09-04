@@ -5,17 +5,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Yeti RC · Speed & Rollout</title>
 
-  <!-- Reuse FuelCalc styling & assets -->
+  <!-- App assets -->
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="stylesheet" href="../mileage/style.css" />
+
+  <!-- Page-specific styles -->
   <style>
     .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .span-2 { grid-column: 1 / -1; }
     .center-field { display:flex; flex-direction:column; align-items:center; }
     .center-field .field-wrap { width: 100%; max-width: 300px; }
     .kv { display:flex; justify-content:space-between; gap:12px; margin:8px 0; }
+
     .result-box {
       margin: 20px 0 30px; padding: 20px 20px 30px;
       background: #eef3fa; border-radius: 8px;
@@ -24,6 +27,7 @@
       transition: background-color 0.3s;
     }
     body.dark-mode .result-box { background:#303841; }
+
     .checkbox-row { display:flex; align-items:center; gap:8px; margin:-10px 0 30px; }
     input[type="checkbox"] { inline-size: 18px; block-size: 18px; }
     .dimmed { opacity:.5; }
@@ -31,11 +35,11 @@
 
     .delta-block { display:flex; flex-direction:column; align-items:center; text-align:center; }
     .delta-value { font-size:1.4rem; font-weight:bold; margin-top:6px; }
-    .delta-positive { color:#2e7d32; }  /* green */
-    .delta-negative { color:#c62828; }  /* red */
-    .delta-neutral  { color:#666; }     /* gray */
+    .delta-positive { color:#2e7d32; }
+    .delta-negative { color:#c62828; }
+    .delta-neutral  { color:#666; }
 
-    /* ===== Overlay shells (both) ===== */
+    /* ===== Overlays (shared) ===== */
     #pinionOverlay, #spurOverlay { position:fixed; inset:0; display:none; z-index:9999; }
     #pinionOverlay[aria-hidden="false"], #spurOverlay[aria-hidden="false"] { display:block; }
     #pinionOverlay .pp-backdrop, #spurOverlay .pp-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.5); }
@@ -44,24 +48,16 @@
       background:#1a1f25; border-radius:16px; box-shadow:0 8px 40px rgba(0,0,0,.45);
       display:flex; flex-direction:column; max-height:88%;
     }
-    @media (min-width: 500px) {
-      #pinionOverlay .pp-sheet, #spurOverlay .pp-sheet { inset:8% 20% auto 20%; }
-    }
-    .pp-header {
-      display:flex; align-items:center; justify-content:space-between;
-      padding:12px 12px 6px; border-bottom:1px solid #2a2a2a;
-    }
+    @media (min-width:500px){ #pinionOverlay .pp-sheet, #spurOverlay .pp-sheet { inset:8% 20% auto 20%; } }
+    .pp-header { display:flex; align-items:center; justify-content:space-between; padding:12px 12px 6px; border-bottom:1px solid #2a2a2a; }
     .pp-header h2 { margin:0; font-size:1.2rem; }
     #ppBack, #spBack { background:transparent; border:0; color:#cfe6df; font-size:1.2rem; padding:6px 8px; cursor:pointer; }
-    .pp-table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; }
-    .pp-table { width:100%; border-collapse:collapse; }
-    .pp-table thead th { text-align:center; font-size:.8rem; opacity:.85; padding:10px 14px; border-bottom:1px solid #2a2a2a; }
-    .pp-table td { padding:14px; border-bottom:1px solid #222a30; text-align:center; }
 
-    /* ===== Sticky header + vertical centering (both) ===== */
-    #pinionOverlay .pp-table-wrap, #spurOverlay .pp-table-wrap {
-      overflow:auto; -webkit-overflow-scrolling:touch; max-height:65vh;
-    }
+    .pp-table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; max-height:65vh; }
+    .pp-table { width:100%; border-collapse:collapse; }
+    .pp-table thead th { text-align:center; font-size:.8rem; opacity:.9; padding:10px 14px; border-bottom:1px solid #2a2a2a; }
+
+    /* Sticky header + vertical centering */
     #pinionOverlay .pp-table thead th, #spurOverlay .pp-table thead th {
       position:sticky; top:0; z-index:2;
       background:#1a1f25; border-bottom:1px solid #2a2a2a;
@@ -69,16 +65,56 @@
     }
     #pinionOverlay .pp-table td, #spurOverlay .pp-table td { vertical-align:middle; }
 
+    .pp-table td { padding:14px; border-bottom:1px solid #222a30; text-align:center; }
     .pp-row { cursor:pointer; border-radius:12px; }
     .pp-row.selected { background:#2d4a45; }
-    .pp-table td:nth-child(2), .pp-table td:nth-child(3), .pp-table td:nth-child(4) {
-      text-align:center; font-variant-numeric:tabular-nums;
-    }
+    .pp-table td:nth-child(2), .pp-table td:nth-child(3), .pp-table td:nth-child(4) { text-align:center; font-variant-numeric:tabular-nums; }
 
-    /* Light mode tint for sticky header */
+    /* Light mode sticky header tint */
     body:not(.dark-mode) #pinionOverlay .pp-table thead th,
     body:not(.dark-mode) #spurOverlay   .pp-table thead th {
-      background:#fff; border-bottom-color:#ddd; box-shadow:0 1px 0 rgba(0,0,0,0.06);
+      background:#fff; border-bottom-color:#ddd; box-shadow:0 1px 0 rgba(0,0,0,.06);
+    }
+
+    /* ===== Drawer (details/summary) ===== */
+    details.drawer {
+      margin: 10px 0 20px;
+      border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 8px;
+      background: #f6f8fb;
+      overflow: hidden;
+    }
+    body.dark-mode details.drawer {
+      border-color: rgba(255,255,255,0.12);
+      background: #26303a;
+    }
+    details.drawer > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 12px 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      user-select: none;
+    }
+    /* Chevron */
+    details.drawer > summary::before {
+      content: '▸';
+      transition: transform .2s ease;
+      display: inline-block;
+    }
+    details.drawer[open] > summary::before { transform: rotate(90deg); }
+    details.drawer .drawer-content {
+      padding: 10px 16px 14px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      line-height: 1.6;
+    }
+    body.dark-mode details.drawer .drawer-content {
+      border-top-color: rgba(255,255,255,0.08);
+    }
+    details.drawer ol {
+      margin: 8px 0 0 20px;
     }
   </style>
 </head>
@@ -92,7 +128,7 @@
     </div>
     <div class="flyout-links">
       <a class="menu-link" href="#">🏠 Home</a>
-      <a class="menu-link" href="../mileage/index.html">⛽ Fuel Calculator </a>
+      <a class="menu-link" href="../mileage/index.html">⛽ Fuel Calculator</a>
       <a class="menu-link" href="../gearing/index.html" aria-current="page">⚙️ Gearing & Rollout</a>
     </div>
     <div class="flyout-footer">
@@ -102,15 +138,8 @@
 
   <div class="header">
     <img src="../mileage/icons/Yeti-RC-FuelCalc-Logo.png" alt="Logo" class="logo" />
-    <!-- Hamburger button (right side) -->
-    <button id="flyoutOpen"
-            class="icon-btn"
-            aria-label="Open menu"
-            aria-controls="flyoutPanel"
-            aria-expanded="false"
-            style="position:absolute; right:16px; top:18px; background:none; border:none; font-size:24px; cursor:pointer;">
-      ☰
-    </button>
+    <button id="flyoutOpen" class="icon-btn" aria-label="Open menu" aria-controls="flyoutPanel" aria-expanded="false"
+            style="position:absolute; right:16px; top:18px; background:none; border:none; font-size:24px; cursor:pointer;">☰</button>
   </div>
 
   <div class="container">
@@ -141,7 +170,6 @@
         </label>
       </div>
 
-      <!-- Centered Internal Ratio -->
       <div class="span-2 center-field">
         <div class="field-wrap">
           <label id="g_internal_label">Internal Ratio
@@ -198,6 +226,18 @@
       </div>
     </div>
 
+    <!-- NEW: Practical Implications Drawer -->
+    <details class="drawer" id="kv-implications">
+      <summary>Practical implications</summary>
+      <div class="drawer-content">
+        <ol>
+          <li><strong>Lower FDR (smaller number)</strong> → taller gearing → higher speed for a given KV, but more motor load/heat.</li>
+          <li><strong>Higher KV motor</strong> → higher RPM per volt → more top speed potential, but again more current draw and stress.</li>
+          <li>The <strong>sweet spot</strong> is balancing motor KV, voltage, FDR, and tire size so the motor runs efficiently without overheating.</li>
+        </ol>
+      </div>
+    </details>
+
     <div class="mode-toggle">
       <label class="toggle-switch">
         <span>Light</span>
@@ -227,12 +267,7 @@
         <div class="pp-table-wrap">
           <table class="pp-table" aria-describedby="ppTitle">
             <thead>
-              <tr>
-                <th>PINION</th>
-                <th>RATIO</th>
-                <th>FDR</th>
-                <th>ROLLOUT</th>
-              </tr>
+              <tr><th>PINION</th><th>RATIO</th><th>FDR</th><th>ROLLOUT</th></tr>
             </thead>
             <tbody id="ppRows"><!-- rows injected --></tbody>
           </table>
